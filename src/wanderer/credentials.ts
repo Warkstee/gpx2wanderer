@@ -20,6 +20,10 @@ export interface WandererCredentials {
   cookie?: string;
 }
 
+export interface ValhallaConfig {
+  url: string;
+}
+
 /**
  * Parse a .env file content into key-value pairs.
  * Handles comments (lines starting with #) and empty lines.
@@ -69,6 +73,14 @@ function writeEnvFile(env: Record<string, string>): void {
     if (env['WANDERER_COOKIE_ENC']) {
       sections.push(`WANDERER_COOKIE_ENC=${env['WANDERER_COOKIE_ENC']}`);
     }
+  }
+
+  // Valhalla section
+  if (env['VALHALLA_URL_ENC']) {
+    sections.push(
+      '# Valhalla routing engine (encrypted, machine-bound)',
+      `VALHALLA_URL_ENC=${env['VALHALLA_URL_ENC']}`,
+    );
   }
 
   writeFileSync(ENV_PATH, sections.join('\n') + '\n', { mode: 0o600 });
@@ -160,5 +172,57 @@ export function deleteWandererCredentials(): void {
   delete env['WANDERER_USERNAME_ENC'];
   delete env['WANDERER_PASSWORD_ENC'];
   delete env['WANDERER_COOKIE_ENC'];
+  writeEnvFile(env);
+}
+
+/**
+ * Check if Valhalla URL is configured.
+ */
+export function hasValhallaConfig(): boolean {
+  if (!existsSync(ENV_PATH)) return false;
+  const content = readFileSync(ENV_PATH, 'utf-8');
+  const env = parseEnv(content);
+  return !!env['VALHALLA_URL_ENC'];
+}
+
+/**
+ * Load and decrypt Valhalla configuration from the .env file.
+ * Returns null if configuration doesn't exist or decryption fails.
+ */
+export function loadValhallaConfig(): ValhallaConfig | null {
+  if (!existsSync(ENV_PATH)) return null;
+
+  const content = readFileSync(ENV_PATH, 'utf-8');
+  const env = parseEnv(content);
+
+  const urlEnc = env['VALHALLA_URL_ENC'];
+
+  if (!urlEnc) return null;
+
+  try {
+    return {
+      url: decrypt(urlEnc),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Encrypt and save Valhalla configuration to the .env file.
+ * Creates the config directory and file if they don't exist.
+ */
+export function saveValhallaConfig(config: ValhallaConfig): void {
+  const env = readEnvFile();
+  env['VALHALLA_URL_ENC'] = encrypt(config.url);
+  writeEnvFile(env);
+}
+
+/**
+ * Delete Valhalla configuration from the .env file.
+ */
+export function deleteValhallaConfig(): void {
+  const env = readEnvFile();
+  delete env['VALHALLA_URL_ENC'];
   writeEnvFile(env);
 }
