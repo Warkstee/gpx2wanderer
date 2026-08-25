@@ -24,13 +24,6 @@
   - `--max-iterations` - Valhalla validation loop limit
   - `--output` - Output file path
 
-### Database Layer
-- `src/db/schema.ts` - SQLite table definitions:
-  - `credentials` - Encrypted provider credentials
-  - `settings` - Application configuration
-  - `import_history` - Import tracking
-- `src/db/queries.ts` - CRUD operations for all tables
-
 ### Crypto Module
 - `src/crypto/encryption.ts` - AES-256-GCM encryption/decryption
 
@@ -82,13 +75,9 @@ gpx2wanderer/
 │   │   ├── api.ts            ✅ API client (stub)
 │   │   ├── category-mapping.ts ✅ Category mapping
 │   │   └── credentials.ts    ✅ Credential management
-│   ├── db/
-│   │   ├── schema.ts         ✅ Table definitions
-│   │   └── queries.ts        ✅ CRUD operations
 │   ├── crypto/
 │   │   └── encryption.ts     ✅ AES-256-GCM
 │   └── ui/                   📝 Phase 2 (SvelteKit)
-├── data/                     ✅ SQLite DB location
 ├── Dockerfile                ✅ Multi-stage build
 ├── docker-compose.yml        ✅ Single service
 └── [config files]            ✅ All configured

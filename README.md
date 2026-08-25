@@ -71,13 +71,9 @@ gpx2wanderer/
 │ │ ├── api.ts # Upload trails, update metadata
 │ │ ├── category-mapping.ts
 │ │ └── credentials.ts
-│ ├── db/ # SQLite database layer
-│ │ ├── schema.ts # Table definitions
-│ │ └── queries.ts # CRUD operations
 │ ├── crypto/ # Credential encryption
 │ │ └── encryption.ts # AES-256-GCM
 │ └── ui/ # SvelteKit frontend (Phase 2)
-├── data/ # SQLite DB, logs (Docker volume)
 ├── Dockerfile
 └── docker-compose.yml
 
@@ -96,16 +92,10 @@ gpx2wanderer/
 - Built-in routing and server-side rendering
 - Perfect for dashboard-style UI
 
-### Database: SQLite
-- Zero configuration, file-based
-- Perfect for single-user/personal tools
-- No separate database container needed
-- Mounted as Docker volume for persistence
-
 ### Credential Encryption: AES-256-GCM
-- Master key from environment variable
+- Machine-bound key derivation (scrypt)
 - Per-provider credential storage (Komoot, Strava, Wanderer)
-- Encrypted at rest in SQLite
+- Encrypted at rest in `~/.gpx2wanderer/.env`
 
 ### Language: TypeScript
 - Existing codebase provides ~60% reusable logic

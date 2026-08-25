@@ -5,12 +5,9 @@ services:
     build: .
     ports:
       - "4000:4000"
-    volumes:
-      - ./data:/app/data
     environment:
       - NODE_ENV=production
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - VALHALLA_URL=${VALHALLA_URL:-http://valhalla:8002}
       - WANDERER_URL=${WANDERER_URL:-http://wanderer:3000}
-      - DATABASE_PATH=/app/data/gpx2wanderer.db
     restart: unless-stopped

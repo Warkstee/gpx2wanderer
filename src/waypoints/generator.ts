@@ -19,7 +19,7 @@ export interface GenerationResult {
 function haversineDistance(p1: GPXPoint, p2: GPXPoint): number {
   const R = 6371000; // Earth radius in meters
   const dLat = ((p2.lat - p1.lat) * Math.PI) / 180;
-  const dLon = ((p2.lon - p1.lon) * Math.PI) / 180;
+  const dLon = ((p2.lng - p1.lng) * Math.PI) / 180;
   const lat1 = (p1.lat * Math.PI) / 180;
   const lat2 = (p2.lat * Math.PI) / 180;
 
@@ -122,7 +122,7 @@ export async function generateWaypoints(
       for (let i = 0; i < originalTrack.length; i++) {
         if (
           Math.abs(originalTrack[i].lat - wp.lat) < 1e-7 &&
-          Math.abs(originalTrack[i].lon - wp.lon) < 1e-7
+          Math.abs(originalTrack[i].lng - wp.lng) < 1e-7
         ) {
           return i;
         }

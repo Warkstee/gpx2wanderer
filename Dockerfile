@@ -29,12 +29,6 @@ RUN npm ci --production
 # Copy built application
 COPY --from=builder /app/dist ./dist
 
-# Create data directory for SQLite
-RUN mkdir -p /app/data
-
-# Volume for persistent data
-VOLUME ["/app/data"]
-
 # Expose port
 EXPOSE 4000
 

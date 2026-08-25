@@ -55,6 +55,10 @@ export function parseGPX(xmlContent: string): GPXFile {
 function parseTrack(trk: any): GPXTrack {
   const track: GPXTrack = {
     name: trk.name,
+    type: trk.type,
+    comment: trk.cmt,
+    description: trk.desc,
+    time: trk.time,
     segments: [],
   };
 
@@ -82,7 +86,7 @@ function parseSegment(seg: any): GPXTrackSegment {
 function parsePoint(pt: any): GPXPoint {
   const point: GPXPoint = {
     lat: parseFloat(pt['@_lat']),
-    lon: parseFloat(pt['@_lon']),
+    lng: parseFloat(pt['@_lon']),
   };
 
   if (pt.ele !== undefined) {
@@ -99,7 +103,7 @@ function parsePoint(pt: any): GPXPoint {
 function parseWaypoint(wpt: any): GPXWaypoint {
   const waypoint: GPXWaypoint = {
     lat: parseFloat(wpt['@_lat']),
-    lon: parseFloat(wpt['@_lon']),
+    lng: parseFloat(wpt['@_lon']),
   };
 
   if (wpt.ele !== undefined) {

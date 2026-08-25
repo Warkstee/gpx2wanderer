@@ -8,7 +8,7 @@ import type { GPXPoint } from '../gpx/types.js';
  * Calculate perpendicular distance from point to line segment
  */
 function perpendicularDistance(point: GPXPoint, lineStart: GPXPoint, lineEnd: GPXPoint): number {
-  const dx = lineEnd.lon - lineStart.lon;
+  const dx = lineEnd.lng - lineStart.lng;
   const dy = lineEnd.lat - lineStart.lat;
 
   // Normalize latitude for distance calculation (approximate)
@@ -16,7 +16,7 @@ function perpendicularDistance(point: GPXPoint, lineStart: GPXPoint, lineEnd: GP
   const dxMeters = dx * 111320 * Math.cos(latRad);
   const dyMeters = dy * 110540;
 
-  const pointDx = (point.lon - lineStart.lon) * 111320 * Math.cos(latRad);
+  const pointDx = (point.lng - lineStart.lng) * 111320 * Math.cos(latRad);
   const pointDy = (point.lat - lineStart.lat) * 110540;
 
   const lineLengthSq = dxMeters * dxMeters + dyMeters * dyMeters;

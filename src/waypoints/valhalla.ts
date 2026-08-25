@@ -42,7 +42,7 @@ export class ValhallaClient {
   async route(waypoints: GPXPoint[], costing = 'bicycle'): Promise<ValhallaRoute> {
     const locations = waypoints.map((wp) => ({
       lat: wp.lat,
-      lon: wp.lon,
+      lon: wp.lng,
     }));
 
     const requestBody = {
@@ -119,7 +119,7 @@ export class ValhallaClient {
 
       points.push({
         lat: lat / 1e6,
-        lon: lon / 1e6,
+        lng: lon / 1e6,
       });
     }
 

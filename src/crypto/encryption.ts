@@ -1,78 +1,67 @@
 /**
  * AES-256-GCM encryption for credential storage
+ * 
+ * Uses machine-bound key derivation via scrypt, tying encrypted credentials
+ * to the current machine + user. This eliminates the need for environment
+ * variables while maintaining security.
  */
 
-import crypto from 'node:crypto';
+import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:crypto';
+import { hostname, userInfo } from 'node:os';
 
 const ALGORITHM = 'aes-256-gcm';
-const IV_LENGTH = 12; // 96 bits for GCM
-const TAG_LENGTH = 16; // 128 bits
+const IV_LENGTH = 16;
+const AUTH_TAG_LENGTH = 16;
+const KEY_LENGTH = 32;
+const APP_SALT = 'gpx2wanderer-credential-store-v1';
 
 /**
- * Encrypt data using AES-256-GCM
- * @param data - Data to encrypt (will be JSON stringified)
- * @param encryptionKey - 32-byte hex key
- * @returns Object with encrypted data (hex) and IV (hex)
+ * Derive an encryption key from machine-specific identifiers.
+ * This ties the encrypted credentials to the current machine + user,
+ * so they can't be decrypted on a different machine.
  */
-export function encrypt(data: unknown, encryptionKey: string): { encrypted: string; iv: string } {
-  const key = Buffer.from(encryptionKey, 'hex');
-  
-  if (key.length !== 32) {
-    throw new Error('Encryption key must be 32 bytes (64 hex characters)');
-  }
+function getEncryptionKey(): Buffer {
+  const machineId = `${hostname()}:${userInfo().username}`;
+  return scryptSync(machineId, APP_SALT, KEY_LENGTH);
+}
 
-  const iv = crypto.randomBytes(IV_LENGTH);
-  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
-  
-  const plaintext = JSON.stringify(data);
-  let encrypted = cipher.update(plaintext, 'utf8', 'hex');
-  encrypted += cipher.final('hex');
-  
+/**
+ * Encrypt a plaintext string using AES-256-GCM.
+ * Returns a base64-encoded string containing IV + auth tag + ciphertext.
+ * 
+ * @param plaintext - The string to encrypt
+ * @returns Base64-encoded encrypted data
+ */
+export function encrypt(plaintext: string): string {
+  const key = getEncryptionKey();
+  const iv = randomBytes(IV_LENGTH);
+
+  const cipher = createCipheriv(ALGORITHM, key, iv);
+  const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
   const authTag = cipher.getAuthTag();
-  
-  // Combine encrypted data and auth tag
-  const combined = encrypted + authTag.toString('hex');
-  
-  return {
-    encrypted: combined,
-    iv: iv.toString('hex'),
-  };
+
+  const combined = Buffer.concat([iv, authTag, encrypted]);
+  return combined.toString('base64');
 }
 
 /**
- * Decrypt data using AES-256-GCM
- * @param encryptedData - Hex string of encrypted data + auth tag
- * @param iv - Hex string of initialization vector
- * @param encryptionKey - 32-byte hex key
- * @returns Decrypted data (parsed from JSON)
+ * Decrypt a base64-encoded string produced by encrypt().
+ * Throws if the data has been tampered with or the key is wrong.
+ * 
+ * @param encoded - Base64-encoded encrypted data
+ * @returns Decrypted plaintext string
  */
-export function decrypt<T = unknown>(encryptedData: string, iv: string, encryptionKey: string): T {
-  const key = Buffer.from(encryptionKey, 'hex');
-  
-  if (key.length !== 32) {
-    throw new Error('Encryption key must be 32 bytes (64 hex characters)');
-  }
+export function decrypt(encoded: string): string {
+  const combined = Buffer.from(encoded, 'base64');
 
-  const ivBuffer = Buffer.from(iv, 'hex');
-  
-  // Split encrypted data and auth tag
-  const authTagHex = encryptedData.slice(-TAG_LENGTH * 2);
-  const encryptedHex = encryptedData.slice(0, -TAG_LENGTH * 2);
-  
-  const authTag = Buffer.from(authTagHex, 'hex');
-  const decipher = crypto.createDecipheriv(ALGORITHM, key, ivBuffer);
+  const iv = combined.subarray(0, IV_LENGTH);
+  const authTag = combined.subarray(IV_LENGTH, IV_LENGTH + AUTH_TAG_LENGTH);
+  const ciphertext = combined.subarray(IV_LENGTH + AUTH_TAG_LENGTH);
+
+  const key = getEncryptionKey();
+  const decipher = createDecipheriv(ALGORITHM, key, iv);
   decipher.setAuthTag(authTag);
-  
-  let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
-  decrypted += decipher.final('utf8');
-  
-  return JSON.parse(decrypted) as T;
-}
 
-/**
- * Generate a new encryption key
- * @returns 64-character hex string (32 bytes)
- */
-export function generateEncryptionKey(): string {
-  return crypto.randomBytes(32).toString('hex');
+  const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+  return decrypted.toString('utf8');
 }

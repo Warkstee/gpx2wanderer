@@ -1,0 +1,2 @@
+# This directory contains the SQLite database and logs
+# It is mounted as a Docker volume for persistence

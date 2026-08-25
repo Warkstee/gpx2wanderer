@@ -4,7 +4,7 @@
 
 export interface GPXPoint {
   lat: number;
-  lon: number;
+  lng: number;
   ele?: number;
   time?: string;
 }
@@ -15,12 +15,16 @@ export interface GPXTrackSegment {
 
 export interface GPXTrack {
   name?: string;
+  type?: string;
+  comment?: string;
+  description?: string;
+  time?: string;
   segments: GPXTrackSegment[];
 }
 
 export interface GPXWaypoint {
   lat: number;
-  lon: number;
+  lng: number;
   ele?: number;
   name?: string;
   sym?: string;
@@ -41,6 +45,6 @@ export interface GPXFile {
 export interface BoundingBox {
   minLat: number;
   maxLat: number;
-  minLon: number;
-  maxLon: number;
+  minLng: number;
+  maxLng: number;
 }
