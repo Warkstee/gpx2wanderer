@@ -5,6 +5,7 @@
 import type { GPXPoint } from '../gpx/types.js';
 import { simplifyTrack } from './simplifier.js';
 import { ValhallaClient } from './valhalla.js';
+import { findMaxDivergence } from './comparison.js';
 import * as logger from '../utils/logger.js';
 
 export interface GenerationResult {
@@ -12,56 +13,6 @@ export interface GenerationResult {
   iterations: number;
   maxDivergence: number; // meters
   converged: boolean;
-}
-
-/**
- * Calculate distance between two points in meters (Haversine formula)
- */
-function haversineDistance(p1: GPXPoint, p2: GPXPoint): number {
-  const R = 6371000; // Earth radius in meters
-  const dLat = ((p2.lat - p1.lat) * Math.PI) / 180;
-  const dLon = ((p2.lng - p1.lng) * Math.PI) / 180;
-  const lat1 = (p1.lat * Math.PI) / 180;
-  const lat2 = (p2.lat * Math.PI) / 180;
-
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return R * c;
-}
-
-/**
- * Find point of maximum divergence between two tracks
- */
-function findMaxDivergence(
-  original: GPXPoint[],
-  routed: GPXPoint[]
-): { index: number; distance: number; point: GPXPoint } {
-  let maxDistance = 0;
-  let maxIndex = 0;
-  let maxPoint = original[0];
-
-  // For each point in original track, find closest point in routed track
-  for (let i = 0; i < original.length; i++) {
-    let minDistance = Infinity;
-
-    for (const routedPoint of routed) {
-      const distance = haversineDistance(original[i], routedPoint);
-      if (distance < minDistance) {
-        minDistance = distance;
-      }
-    }
-
-    if (minDistance > maxDistance) {
-      maxDistance = minDistance;
-      maxIndex = i;
-      maxPoint = original[i];
-    }
-  }
-
-  return { index: maxIndex, distance: maxDistance, point: maxPoint };
 }
 
 /**
@@ -114,7 +65,7 @@ export async function generateWaypoints(
 
       // Compare routes
       const divergence = findMaxDivergence(originalTrack, route.points);
-      maxDivergence = divergence.distance;
+      maxDivergence = divergence.maxDistance;
 
       logger.debug(`Max divergence: ${maxDivergence.toFixed(1)}m (tolerance: ${tolerance}m)`);
 
@@ -126,7 +77,7 @@ export async function generateWaypoints(
       }
 
       // Add waypoint at point of maximum divergence
-      waypoints.push(divergence.point);
+      waypoints.push(divergence.maxPoint);
 
       // Sort waypoints by their position along the original track
       // (simplified: just sort by index in original track)

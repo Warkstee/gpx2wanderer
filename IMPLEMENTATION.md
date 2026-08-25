@@ -233,4 +233,80 @@ saveValhallaConfig({ url: 'http://localhost:8002' });
 ✅ Graceful error handling for unreachable segments  
 ✅ Comprehensive unit tests with mocked responses  
 ✅ All existing tests still passing  
+✅ TypeScript compilation successful
+
+---
+
+# GPWA-20: Route Comparison Engine - Implementation Summary
+
+## ✅ Completed
+
+### New Module: `src/waypoints/comparison.ts`
+- **`haversineDistance(p1, p2)`** - Calculate distance between two GPS points using Haversine formula
+- **`pointToSegmentDistance(point, segStart, segEnd)`** - Calculate perpendicular distance from a point to a line segment
+- **`findMaxDivergence(original, reference)`** - Find the point of maximum divergence between two tracks
+- **`DivergenceResult` interface** - Structured result with `maxDistance`, `maxIndex`, `maxPoint`, and `divergenceProfile`
+
+### Algorithm Improvements
+- **Segment-based comparison** - Measures distance to route segments (lines between points), not just individual points
+- **Early exit optimization** - Stops searching once a close match (< 1m) is found
+- **Accurate divergence detection** - Handles cases where a point is far from all routed points but close to a route segment
+
+### Generator Integration
+- Updated `src/waypoints/generator.ts` to use the new comparison module
+- Replaced inline `findMaxDivergence` implementation with import from `comparison.ts`
+- Updated field references from `divergence.distance` to `divergence.maxDistance`
+- Updated field references from `divergence.point` to `divergence.maxPoint`
+
+### Testing
+- **17 new unit tests** in `src/__tests__/waypoints/comparison.test.ts`
+- Test coverage includes:
+  - Haversine distance calculation (identical points, known distances, symmetry)
+  - Point-to-segment distance (perpendicular, beyond endpoints, zero-length segments)
+  - Maximum divergence detection (identical tracks, parallel tracks, zigzag patterns)
+  - Edge cases (empty tracks, single-point tracks, asymmetric comparisons)
+  - Divergence profile generation (all points, middle points, first/last points)
+
+## 📊 Test Results
+
+```bash
+# Build
+npm run build          ✅ Success (no errors)
+
+# Test
+npm test               ✅ 122 tests passing (17 new comparison tests)
+```
+
+## 🔧 Technical Details
+
+### Segment-Based Comparison
+The old implementation measured distance from each original point to the nearest routed **point**. This could miss cases where a point is far from all routed points but close to a route **segment** (the line between two consecutive routed points).
+
+The new implementation:
+1. For each point in the original track, calculates distance to all segments in the reference track
+2. Uses perpendicular distance formula with proper clamping to segment endpoints
+3. Returns the minimum distance across all segments
+4. Tracks the maximum of these minimum distances
+
+### Early Exit Optimization
+When searching for the closest segment, the algorithm stops early if it finds a distance < 1 meter. This prevents unnecessary calculations when a very close match is found.
+
+### Divergence Profile
+The `divergenceProfile` array contains the distance (in meters) for every point in the original track. This is useful for:
+- Debugging where routes diverge
+- Visualization
+- Deciding if divergence is localized or systemic
+
+### Asymmetric Comparison
+`findMaxDivergence(trackA, trackB)` is not the same as `findMaxDivergence(trackB, trackA)`. The function measures how far points in the **first** track are from the **second** track. This is intentional and correct for the waypoint generation use case.
+
+## 🎯 Success Criteria Met
+
+✅ Extracted `findMaxDivergence` into dedicated module  
+✅ Implemented segment-based distance calculation  
+✅ Added early exit optimization for performance  
+✅ Returns structured `DivergenceResult` with divergence profile  
+✅ Comprehensive unit tests with synthetic tracks  
+✅ Integrated with waypoint generator  
+✅ All existing tests still passing  
 ✅ TypeScript compilation successful  
