@@ -44,3 +44,8 @@ downloads/
 
 # System outputs
 *.gpx
+
+# Database files
+data/
+*.db
+*.db-journal
