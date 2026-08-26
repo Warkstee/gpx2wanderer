@@ -15,13 +15,116 @@ import { buildMultiSegmentTrack } from './waypoints/segment-builder.js';
 import { postSimplifyWaypoints } from './waypoints/post-simplifier.js';
 import { loadValhallaConfig, hasValhallaConfig, saveValhallaConfig, loadWandererCredentials, saveWandererCookie, type WandererCredentials } from './wanderer/credentials.js';
 import { promptForWandererCredentials } from './wanderer/prompts.js';
-import { login as wandererLogin, validateCookie, uploadTrail, updateTrail, DuplicateTrailError, findTrailBySourceTag, createTag, deleteTag, listTags } from './wanderer/api.js';
+import { login as wandererLogin, validateCookie, uploadTrail, updateTrail, DuplicateTrailError, findTrailBySourceTag, createTag, deleteTag, listTags, cleanupOrphanedTags } from './wanderer/api.js';
 import { mapSportToCategory } from './wanderer/category-mapping.js';
 import * as logger from './utils/logger.js';
 import type { GPXFile, GPXTrack, GPXPoint } from './gpx/types.js';
 
 // Load environment variables (for backward compatibility)
 dotenv.config();
+
+/**
+ * Map GPX track type to Wanderer difficulty.
+ * 
+ * Derives difficulty from the track type string (e.g., "mtb_easy" → "easy").
+ * Falls back to "moderate" for unrecognized types.
+ */
+function mapTypeToDifficulty(trackType?: string): string | undefined {
+  if (!trackType) return undefined;
+
+  const type = trackType.toLowerCase();
+
+  // Explicit easy types
+  if (type.includes('easy') || type === 'walking' || type === 'walk') {
+    return 'easy';
+  }
+
+  // Explicit difficult types
+  if (type.includes('difficult') || type.includes('extreme') || type === 'mtb' || type === 'enduro') {
+    return 'difficult';
+  }
+
+  // Moderate types (default for most activity types)
+  if (type.includes('moderate') || type === 'hike' || type === 'hiking' || type === 'bike' || type === 'cycling') {
+    return 'moderate';
+  }
+
+  // For known sport codes that don't have an explicit difficulty hint, default to moderate
+  return 'moderate';
+}
+
+/**
+ * Resolve Wanderer authentication:
+ * 1. Load stored credentials
+ * 2. Validate cached cookie or re-authenticate
+ * 3. Prompt user if credentials are missing or invalid (when promptOnFailure is true)
+ * 
+ * Returns the authenticated session (host + cookie) or null if authentication
+ * is skipped or fails.
+ */
+async function resolveWandererAuth(promptOnFailure: boolean = false): Promise<{ host: string; cookie: string } | null> {
+  // Load stored Wanderer credentials
+  let wandererCreds = loadWandererCredentials();
+  
+  if (!wandererCreds) {
+    logger.debug('No stored Wanderer credentials found');
+    if (promptOnFailure) {
+      wandererCreds = await promptForWandererCredentials();
+      if (!wandererCreds) return null;
+      // promptForWandererCredentials already logs in and saves the cookie
+      return { host: wandererCreds.host, cookie: wandererCreds.cookie! };
+    }
+    return null;
+  }
+  
+  logger.debug('Loaded stored Wanderer credentials');
+  
+  // Validate cached cookie or re-login
+  let cookie = wandererCreds.cookie;
+  
+  if (cookie) {
+    const isValid = await validateCookie(wandererCreds.host, cookie);
+    
+    if (!isValid) {
+      logger.debug('Cached Wanderer cookie expired — re-authenticating...');
+      try {
+        const loginResult = await wandererLogin(wandererCreds.host, wandererCreds.username, wandererCreds.password);
+        cookie = loginResult.cookie;
+        saveWandererCookie(cookie);
+        logger.debug('Wanderer cookie refreshed');
+      } catch (err) {
+        logger.debug(`Wanderer re-login failed: ${err instanceof Error ? err.message : String(err)}`);
+        if (promptOnFailure) {
+          wandererCreds = await promptForWandererCredentials('\nStored Wanderer credentials are no longer valid. Please log in again.\n');
+          if (!wandererCreds) return null;
+          return { host: wandererCreds.host, cookie: wandererCreds.cookie! };
+        }
+        return null;
+      }
+    } else {
+      logger.debug('Cached Wanderer cookie is valid');
+    }
+  } else {
+    // No cached cookie — login now
+    logger.debug('No cached Wanderer cookie — authenticating...');
+    try {
+      const loginResult = await wandererLogin(wandererCreds.host, wandererCreds.username, wandererCreds.password);
+      cookie = loginResult.cookie;
+      saveWandererCookie(cookie);
+      logger.debug('Wanderer login successful');
+    } catch (err) {
+      logger.debug(`Wanderer login failed: ${err instanceof Error ? err.message : String(err)}`);
+      if (promptOnFailure) {
+        wandererCreds = await promptForWandererCredentials('\nWanderer login failed. Please check your credentials.\n');
+        if (!wandererCreds) return null;
+        return { host: wandererCreds.host, cookie: wandererCreds.cookie! };
+      }
+      return null;
+    }
+  }
+  
+  return { host: wandererCreds.host, cookie: cookie! };
+}
 
 const program = new Command();
 
@@ -61,6 +164,31 @@ program
         console.error(chalk.red(`Error: Unknown service "${service}". Available services: valhalla, wanderer`));
         process.exit(1);
       }
+    } catch (error) {
+      console.error(chalk.red('Error:'), error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
+  });
+
+// Cleanup command for orphaned tags
+program
+  .command('cleanup-tags')
+  .description('Delete tags that are not assigned to any trail')
+  .action(async () => {
+    try {
+      const session = await resolveWandererAuth(true);
+      if (!session) {
+        logger.error('Wanderer authentication is required. Exiting.');
+        process.exit(1);
+      }
+
+      logger.info('Scanning for orphaned tags...');
+      const result = await cleanupOrphanedTags(session.host, session.cookie);
+
+      logger.info(`Total tags: ${result.totalTags}`);
+      logger.info(`Tags in use: ${result.usedTags}`);
+      logger.info(`Orphaned tags deleted: ${result.deletedTags}`);
+      console.log(chalk.green('\n✓ Tag cleanup complete!'));
     } catch (error) {
       console.error(chalk.red('Error:'), error instanceof Error ? error.message : error);
       process.exit(1);
@@ -244,109 +372,6 @@ program
       logger.info('Writing output file...');
       writeGpxFile(gpxXml, outputPath);
       
-
-/**
- * Map GPX track type to Wanderer difficulty.
- * 
- * Derives difficulty from the track type string (e.g., "mtb_easy" → "easy").
- * Falls back to "moderate" for unrecognized types.
- */
-function mapTypeToDifficulty(trackType?: string): string | undefined {
-  if (!trackType) return undefined;
-
-  const type = trackType.toLowerCase();
-
-  // Explicit easy types
-  if (type.includes('easy') || type === 'walking' || type === 'walk') {
-    return 'easy';
-  }
-
-  // Explicit difficult types
-  if (type.includes('difficult') || type.includes('extreme') || type === 'mtb' || type === 'enduro') {
-    return 'difficult';
-  }
-
-  // Moderate types (default for most activity types)
-  if (type.includes('moderate') || type === 'hike' || type === 'hiking' || type === 'bike' || type === 'cycling') {
-    return 'moderate';
-  }
-
-  // For known sport codes that don't have an explicit difficulty hint, default to moderate
-  return 'moderate';
-}
-
-/**
- * Resolve Wanderer authentication:
- * 1. Load stored credentials
- * 2. Validate cached cookie or re-authenticate
- * 3. Prompt user if credentials are missing or invalid (when promptOnFailure is true)
- * 
- * Returns the authenticated session (host + cookie) or null if authentication
- * is skipped or fails.
- */
-async function resolveWandererAuth(promptOnFailure: boolean = false): Promise<{ host: string; cookie: string } | null> {
-  // Load stored Wanderer credentials
-  let wandererCreds = loadWandererCredentials();
-  
-  if (!wandererCreds) {
-    logger.debug('No stored Wanderer credentials found');
-    if (promptOnFailure) {
-      wandererCreds = await promptForWandererCredentials();
-      if (!wandererCreds) return null;
-      // promptForWandererCredentials already logs in and saves the cookie
-      return { host: wandererCreds.host, cookie: wandererCreds.cookie! };
-    }
-    return null;
-  }
-  
-  logger.debug('Loaded stored Wanderer credentials');
-  
-  // Validate cached cookie or re-login
-  let cookie = wandererCreds.cookie;
-  
-  if (cookie) {
-    const isValid = await validateCookie(wandererCreds.host, cookie);
-    
-    if (!isValid) {
-      logger.debug('Cached Wanderer cookie expired — re-authenticating...');
-      try {
-        const loginResult = await wandererLogin(wandererCreds.host, wandererCreds.username, wandererCreds.password);
-        cookie = loginResult.cookie;
-        saveWandererCookie(cookie);
-        logger.debug('Wanderer cookie refreshed');
-      } catch (err) {
-        logger.debug(`Wanderer re-login failed: ${err instanceof Error ? err.message : String(err)}`);
-        if (promptOnFailure) {
-          wandererCreds = await promptForWandererCredentials('\nStored Wanderer credentials are no longer valid. Please log in again.\n');
-          if (!wandererCreds) return null;
-          return { host: wandererCreds.host, cookie: wandererCreds.cookie! };
-        }
-        return null;
-      }
-    } else {
-      logger.debug('Cached Wanderer cookie is valid');
-    }
-  } else {
-    // No cached cookie — login now
-    logger.debug('No cached Wanderer cookie — authenticating...');
-    try {
-      const loginResult = await wandererLogin(wandererCreds.host, wandererCreds.username, wandererCreds.password);
-      cookie = loginResult.cookie;
-      saveWandererCookie(cookie);
-      logger.debug('Wanderer login successful');
-    } catch (err) {
-      logger.debug(`Wanderer login failed: ${err instanceof Error ? err.message : String(err)}`);
-      if (promptOnFailure) {
-        wandererCreds = await promptForWandererCredentials('\nWanderer login failed. Please check your credentials.\n');
-        if (!wandererCreds) return null;
-        return { host: wandererCreds.host, cookie: wandererCreds.cookie! };
-      }
-      return null;
-    }
-  }
-  
-  return { host: wandererCreds.host, cookie: cookie! };
-}
       logger.success(`Output written to: ${outputPath}`);
 
       // --- Upload to Wanderer (if --upload is set) ----------------------------

@@ -582,3 +582,104 @@ export async function findTrailBySourceTag(
 
   return matchingTrail?.id ?? null;
 }
+
+/**
+ * Collect all tag IDs that are currently assigned to trails.
+ * 
+ * Uses the multi-index search endpoint to fetch all trails and extract
+ * their tag IDs. Handles pagination automatically.
+ * 
+ * @param host - Wanderer instance base URL
+ * @param cookie - Session cookie for authentication
+ * @returns Set of tag IDs that are in use
+ */
+export async function collectUsedTagIds(
+  host: string,
+  cookie: string,
+): Promise<Set<string>> {
+  const usedTagIds = new Set<string>();
+  const url = `${host}/api/v1/trail`;
+  let page = 1;
+  const perPage = 100;
+
+  while (true) {
+    let response: Response;
+    try {
+      response = await fetch(`${url}?page=${page}&perPage=${perPage}`, {
+        method: 'GET',
+        headers: {
+          'Cookie': cookie,
+        },
+      });
+    } catch (err) {
+      throw new Error(`Network error during trail listing: ${err instanceof Error ? err.message : String(err)}`);
+    }
+
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`Failed to list trails (${response.status}): ${body}`);
+    }
+
+    const data = await response.json() as {
+      items: Array<{ tags?: string[] }>;
+      page: number;
+      perPage: number;
+      totalPages: number;
+    };
+
+    // Collect tag IDs from all trails
+    for (const trail of data.items) {
+      if (trail.tags) {
+        for (const tagId of trail.tags) {
+          usedTagIds.add(tagId);
+        }
+      }
+    }
+
+    // Check if we've fetched all pages
+    if (page >= data.totalPages) {
+      break;
+    }
+    page++;
+  }
+
+  return usedTagIds;
+}
+
+/**
+ * Clean up orphaned tags that are not assigned to any trail.
+ * 
+ * Compares all tags in the system with the tags actually used by trails,
+ * then deletes any tag that isn't referenced.
+ * 
+ * @param host - Wanderer instance base URL
+ * @param cookie - Session cookie for authentication
+ * @returns Object with counts of total tags, used tags, and deleted tags
+ */
+export async function cleanupOrphanedTags(
+  host: string,
+  cookie: string,
+): Promise<{ totalTags: number; usedTags: number; deletedTags: number }> {
+  // Collect all tag IDs that are in use
+  const usedTagIds = await collectUsedTagIds(host, cookie);
+  console.log('Used tag IDs:', Array.from(usedTagIds));
+
+  // List all tags
+  const allTags = await listTags(host, cookie);
+  console.log('All tags:', allTags.map(t => ({ id: t.id, name: t.name })));
+
+  let deletedCount = 0;
+  for (const tag of allTags) {
+    console.log(`Checking tag ${tag.id} (${tag.name}): ${usedTagIds.has(tag.id) ? 'KEEP' : 'DELETE'}`);
+    if (!usedTagIds.has(tag.id)) {
+      await deleteTag(host, cookie, tag.id);
+      deletedCount++;
+    }
+  }
+
+  return {
+    totalTags: allTags.length,
+    usedTags: usedTagIds.size,
+    deletedTags: deletedCount,
+  };
+}
