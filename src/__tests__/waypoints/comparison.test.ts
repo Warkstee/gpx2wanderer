@@ -38,47 +38,57 @@ describe('Route Comparison Engine', () => {
       const start: GPXPoint = { lat: 53.0, lng: 10.0 };
       const end: GPXPoint = { lat: 53.1, lng: 10.1 };
       const mid: GPXPoint = { lat: 53.05, lng: 10.05 };
-      const distance = pointToSegmentDistance(mid, start, end);
-      expect(distance).toBeLessThan(1); // Within 1 meter
+      const result = pointToSegmentDistance(mid, start, end);
+      expect(result.distance).toBeLessThan(1); // Within 1 meter
     });
 
     it('should calculate perpendicular distance', () => {
       const start: GPXPoint = { lat: 53.0, lng: 10.0 };
       const end: GPXPoint = { lat: 53.0, lng: 10.1 }; // Horizontal line
       const point: GPXPoint = { lat: 53.01, lng: 10.05 }; // 100m north
-      const distance = pointToSegmentDistance(point, start, end);
-      expect(distance).toBeGreaterThan(1000); // > 1 km
-      expect(distance).toBeLessThan(1200); // < 1.2 km
+      const result = pointToSegmentDistance(point, start, end);
+      expect(result.distance).toBeGreaterThan(1000); // > 1 km
+      expect(result.distance).toBeLessThan(1200); // < 1.2 km
     });
 
     it('should handle point beyond segment end', () => {
       const start: GPXPoint = { lat: 53.0, lng: 10.0 };
       const end: GPXPoint = { lat: 53.0, lng: 10.1 };
       const beyond: GPXPoint = { lat: 53.0, lng: 10.2 }; // Beyond end
-      const distance = pointToSegmentDistance(beyond, start, end);
+      const result = pointToSegmentDistance(beyond, start, end);
       // Should be distance to end point, not perpendicular
       const expectedDist = haversineDistance(beyond, end);
-      expect(Math.abs(distance - expectedDist)).toBeLessThan(10); // Within 10m
+      expect(Math.abs(result.distance - expectedDist)).toBeLessThan(10); // Within 10m
     });
 
     it('should handle point before segment start', () => {
       const start: GPXPoint = { lat: 53.0, lng: 10.0 };
       const end: GPXPoint = { lat: 53.0, lng: 10.1 };
       const before: GPXPoint = { lat: 53.0, lng: 9.9 }; // Before start
-      const distance = pointToSegmentDistance(before, start, end);
+      const result = pointToSegmentDistance(before, start, end);
       // Should be distance to start point
       const expectedDist = haversineDistance(before, start);
-      expect(Math.abs(distance - expectedDist)).toBeLessThan(10); // Within 10m
+      expect(Math.abs(result.distance - expectedDist)).toBeLessThan(10); // Within 10m
     });
 
     it('should handle zero-length segment', () => {
       const point: GPXPoint = { lat: 53.0, lng: 10.0 };
       const startEnd: GPXPoint = { lat: 53.1, lng: 10.1 };
-      const distance = pointToSegmentDistance(point, startEnd, startEnd);
+      const result = pointToSegmentDistance(point, startEnd, startEnd);
       const expectedDist = haversineDistance(point, startEnd);
       // pointToSegmentDistance uses flat-earth approximation, haversine uses
       // spherical formula — allow up to 1% difference for long distances
-      expect(Math.abs(distance - expectedDist)).toBeLessThan(expectedDist * 0.01);
+      expect(Math.abs(result.distance - expectedDist)).toBeLessThan(expectedDist * 0.01);
+    });
+
+    it('should return projected point on segment', () => {
+      const start: GPXPoint = { lat: 53.0, lng: 10.0 };
+      const end: GPXPoint = { lat: 53.0, lng: 10.1 };
+      const point: GPXPoint = { lat: 53.01, lng: 10.05 }; // North of midpoint
+      const result = pointToSegmentDistance(point, start, end);
+      // Projected point should be near the midpoint of the segment
+      expect(result.projectedPoint.lat).toBeCloseTo(53.0, 1);
+      expect(result.projectedPoint.lng).toBeCloseTo(10.05, 1);
     });
   });
 
@@ -215,6 +225,49 @@ describe('Route Comparison Engine', () => {
       // track1 vs track2: how far are track1 points from track2?
       // track2 vs track1: how far are track2 points from track1?
       expect(result1.maxDistance).not.toBe(result2.maxDistance);
+    });
+
+    it('should suppress along-track divergence via secondary check', () => {
+      // Original track: 3 points along a straight line
+      const original: GPXPoint[] = [
+        { lat: 53.0, lng: 10.0 },
+        { lat: 53.005, lng: 10.005 }, // midpoint
+        { lat: 53.01, lng: 10.01 },
+      ];
+      // Routed track: same line but with a point slightly offset along the track
+      // (simulating Valhalla returning a point between the original points)
+      const routed: GPXPoint[] = [
+        { lat: 53.0, lng: 10.0 },
+        { lat: 53.004, lng: 10.004 }, // slightly before midpoint
+        { lat: 53.006, lng: 10.006 }, // slightly after midpoint
+        { lat: 53.01, lng: 10.01 },
+      ];
+      // Without secondary check, the midpoint might show divergence
+      // With secondary check (tolerance=50), it should be suppressed
+      const result = findMaxDivergence(original, routed, 50);
+      // The midpoint's closest routed point lies on the interpolated segment
+      // between original[0] and original[2], so divergence should be suppressed
+      expect(result.maxDistance).toBeLessThan(50);
+    });
+
+    it('should NOT suppress genuine off-track divergence', () => {
+      // Original track: straight line going east
+      const original: GPXPoint[] = [
+        { lat: 53.0, lng: 10.0 },
+        { lat: 53.0, lng: 10.005 }, // midpoint, on the straight line
+        { lat: 53.0, lng: 10.01 },
+      ];
+      // Routed track: goes north then east (completely different path)
+      const routed: GPXPoint[] = [
+        { lat: 53.0, lng: 10.0 },
+        { lat: 53.01, lng: 10.0 }, // goes north first
+        { lat: 53.01, lng: 10.01 }, // then east
+        { lat: 53.0, lng: 10.01 },
+      ];
+      const result = findMaxDivergence(original, routed, 50);
+      // The midpoint (53.0, 10.005) is far from the routed track which goes north
+      // The closest routed point is NOT on the segment between original[0] and original[2]
+      expect(result.maxDistance).toBeGreaterThan(50);
     });
   });
 });

@@ -137,7 +137,7 @@ describe('End-to-End Pipeline Integration (Real Valhalla)', () => {
     // Verify parsing
     expect(gpxData.tracks.length).toBeGreaterThan(0);
     expect(track.name).toBe('Wanderer-Test-Track');
-    expect(allPoints.length).toBe(243);
+    expect(allPoints.length).toBe(244);
     
     // Verify waypoint generation
     expect(result.waypoints.length).toBeGreaterThan(0);

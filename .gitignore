@@ -41,6 +41,3 @@ test-results/
 *.tmp
 *.temp
 downloads/
-
-# System outputs
-*.gpx

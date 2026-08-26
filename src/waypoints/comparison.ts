@@ -26,7 +26,18 @@ interface SegmentDistanceResult {
   distance: number;
   /** Index of the closest segment (between point i and i+1) */
   segmentIndex: number;
+  /** The closest point on the track (projected onto segment or endpoint) */
+  closestPoint: GPXPoint;
 }
+
+/**
+ * Threshold for the secondary divergence check.
+ * If the closest routed point lies within this distance of the interpolated
+ * segment between the two neighboring original points, the divergence is
+ * considered an "along-track" sampling difference rather than a genuine
+ * off-track deviation.
+ */
+const SECONDARY_CHECK_THRESHOLD = 5; // meters
 
 /**
  * Calculate distance between two points in meters (Haversine formula)
@@ -48,13 +59,13 @@ export function haversineDistance(p1: GPXPoint, p2: GPXPoint): number {
 
 /**
  * Calculate perpendicular distance from a point to a line segment
- * Returns the distance in meters
+ * Returns the distance in meters and the projected point coordinates
  */
 export function pointToSegmentDistance(
   point: GPXPoint,
   segStart: GPXPoint,
   segEnd: GPXPoint
-): number {
+): { distance: number; projectedPoint: GPXPoint } {
   // Convert to approximate meters for calculation
   const latRad = ((segStart.lat + segEnd.lat) / 2) * (Math.PI / 180);
   const metersPerDegLat = 111320;
@@ -75,7 +86,10 @@ export function pointToSegmentDistance(
 
   // If segment is a point, return distance to that point
   if (segLenSq === 0) {
-    return Math.sqrt(px * px + py * py);
+    return {
+      distance: Math.sqrt(px * px + py * py),
+      projectedPoint: { lat: segStart.lat, lng: segStart.lng },
+    };
   }
 
   // Project point onto segment, clamping to [0, 1]
@@ -86,8 +100,15 @@ export function pointToSegmentDistance(
   // Distance from point to projection
   const distX = px - projX;
   const distY = py - projY;
+  const distance = Math.sqrt(distX * distX + distY * distY);
 
-  return Math.sqrt(distX * distX + distY * distY);
+  // Convert projected point back to lat/lng
+  const projectedPoint: GPXPoint = {
+    lat: segStart.lat + projY / metersPerDegLat,
+    lng: segStart.lng + projX / metersPerDegLng,
+  };
+
+  return { distance, projectedPoint };
 }
 
 /**
@@ -95,39 +116,47 @@ export function pointToSegmentDistance(
  * Uses early exit optimization: stops checking segments once we're past
  * the point's approximate position along the track
  * 
- * @returns Object with distance and the index of the closest segment
+ * @returns Object with distance, the index of the closest segment, and the closest point
  */
 function minDistanceToTrack(
   point: GPXPoint,
   track: GPXPoint[],
   startIndex: number = 0
 ): SegmentDistanceResult {
-  if (track.length === 0) return { distance: Infinity, segmentIndex: 0 };
-  if (track.length === 1) return { distance: haversineDistance(point, track[0]), segmentIndex: 0 };
+  if (track.length === 0) return { distance: Infinity, segmentIndex: 0, closestPoint: point };
+  if (track.length === 1) {
+    const dist = haversineDistance(point, track[0]);
+    return { distance: dist, segmentIndex: 0, closestPoint: track[0] };
+  }
 
   let minDist = Infinity;
   let minSegmentIndex = startIndex;
+  let closestPoint = point;
 
   // Check segments starting from startIndex
   for (let i = startIndex; i < track.length - 1; i++) {
-    const dist = pointToSegmentDistance(point, track[i], track[i + 1]);
-    if (dist < minDist) {
-      minDist = dist;
+    const result = pointToSegmentDistance(point, track[i], track[i + 1]);
+    if (result.distance < minDist) {
+      minDist = result.distance;
       minSegmentIndex = i;
+      closestPoint = result.projectedPoint;
     }
 
     // Early exit: if we've found a very close match, stop searching
-    if (dist < 1) return { distance: dist, segmentIndex: i }; // Within 1 meter, good enough
+    if (result.distance < 1) {
+      return { distance: result.distance, segmentIndex: i, closestPoint: result.projectedPoint };
+    }
   }
 
   // Also check the last point
   const lastPointDist = haversineDistance(point, track[track.length - 1]);
   if (lastPointDist < minDist) {
     minDist = lastPointDist;
-    minSegmentIndex = track.length - 2; // Last segment
+    minSegmentIndex = track.length - 2;
+    closestPoint = track[track.length - 1];
   }
 
-  return { distance: minDist, segmentIndex: minSegmentIndex };
+  return { distance: minDist, segmentIndex: minSegmentIndex, closestPoint };
 }
 
 /**
@@ -140,14 +169,20 @@ function minDistanceToTrack(
  * - This prevents "up the road" false positives where a point matches a segment far ahead
  * - Multiple original points can match the same segment (when routed track is denser)
  * - We never go backwards to earlier segments
+ * - When divergence exceeds tolerance, perform a secondary check: verify whether the
+ *   closest routed point lies on the interpolated segment between the two neighboring
+ *   original points. If it does (within SECONDARY_CHECK_THRESHOLD), it's an along-track
+ *   sampling difference, not a genuine off-track deviation.
  *
  * @param original - The original track to analyze
  * @param routed - The reference track to compare against
+ * @param tolerance - Primary divergence tolerance in meters (used to trigger secondary check)
  * @returns Divergence result with max distance, index, point, and full profile
  */
 export function findMaxDivergence(
   original: GPXPoint[],
-  routed: GPXPoint[]
+  routed: GPXPoint[],
+  tolerance: number = 50
 ): DivergenceResult {
   if (original.length === 0) {
     return {
@@ -171,14 +206,32 @@ export function findMaxDivergence(
   // using ordered traversal (only search segments from lastSegmentIndex onward)
   for (let i = 0; i < original.length; i++) {
     const result = minDistanceToTrack(original[i], routed, lastSegmentIndex);
-    divergenceProfile[i] = result.distance;
-
+    
     // Update lastSegmentIndex to the matched segment (or keep it if same)
     // This ensures we never go backwards
     lastSegmentIndex = result.segmentIndex;
 
-    if (result.distance > maxDistance) {
-      maxDistance = result.distance;
+    // Primary divergence check
+    let effectiveDistance = result.distance;
+
+    // Secondary check: if divergence exceeds tolerance, verify whether
+    // the closest routed point is actually close to the original point.
+    // If both points are very close (< 5m), it's likely a sampling difference
+    // rather than a genuine off-track deviation.
+    if (result.distance > tolerance) {
+      const pointToPointDist = haversineDistance(original[i], result.closestPoint);
+      
+      if (pointToPointDist <= SECONDARY_CHECK_THRESHOLD) {
+        // The closest routed point is very close to the original point
+        // This is likely a sampling difference, not a real divergence
+        effectiveDistance = 0;
+      }
+    }
+
+    divergenceProfile[i] = effectiveDistance;
+
+    if (effectiveDistance > maxDistance) {
+      maxDistance = effectiveDistance;
       maxIndex = i;
       maxPoint = original[i];
     }

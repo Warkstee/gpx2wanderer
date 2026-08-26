@@ -83,7 +83,7 @@ export async function generateWaypoints(
       consecutiveFailures = 0;
 
       // Compare routes
-      const divergence = findMaxDivergence(originalTrack, route.points);
+      const divergence = findMaxDivergence(originalTrack, route.points, tolerance);
       previousDivergence = maxDivergence;
       maxDivergence = divergence.maxDistance;
 

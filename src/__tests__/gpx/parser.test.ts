@@ -78,15 +78,15 @@ describe('GPX Parser', () => {
       
       // Check that time is parsed
       expect(points[0].time).toBeDefined();
-      expect(points[0].time).toBe('2026-08-25T15:11:52.454Z');
+      expect(points[0].time).toBe('2026-08-26T07:51:36.773Z');
     });
 
     it('should parse all track points', () => {
       const result = parseGPX(gpxContent);
       const points = result.tracks[0].segments[0].points;
       
-      // The test file has 243 track points
-      expect(points.length).toBe(243);
+      // The test file has 244 track points
+      expect(points.length).toBe(244);
     });
   });
 
