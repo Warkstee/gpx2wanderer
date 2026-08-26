@@ -15,7 +15,8 @@ import { buildMultiSegmentTrack } from './waypoints/segment-builder.js';
 import { postSimplifyWaypoints } from './waypoints/post-simplifier.js';
 import { loadValhallaConfig, hasValhallaConfig, saveValhallaConfig, loadWandererCredentials, saveWandererCookie, type WandererCredentials } from './wanderer/credentials.js';
 import { promptForWandererCredentials } from './wanderer/prompts.js';
-import { login as wandererLogin, validateCookie } from './wanderer/api.js';
+import { login as wandererLogin, validateCookie, uploadTrail, updateTrail, DuplicateTrailError, findTrailBySourceTag, createTag, deleteTag, listTags } from './wanderer/api.js';
+import { mapSportToCategory } from './wanderer/category-mapping.js';
 import * as logger from './utils/logger.js';
 import type { GPXFile, GPXTrack, GPXPoint } from './gpx/types.js';
 
@@ -76,6 +77,8 @@ program
   .option('-o, --output <path>', 'Output GPX file path (default: temp directory)')
   .option('--post-simplify', 'Enable post-processing waypoint simplification', false)
   .option('--turn-threshold <degrees>', 'Turn angle threshold for anchor point detection', '150')
+  .option('--upload', 'Upload output GPX to Wanderer after processing', false)
+  .option('--source-id <id>', 'Source identifier for optimistic update (e.g., komoot tour ID)')
   .action(async (gpxFile: string, options: any) => {
     try {
       console.log(chalk.blue('gpx2wanderer v0.1.0'));
@@ -84,17 +87,15 @@ program
       // Set verbose mode
       logger.setVerbose(options.verbose);
       
-      // --- Wanderer Authentication (lazy, for future upload) -------------------
-      // This resolves Wanderer credentials and validates/refreshes the session cookie.
-      // The authenticated session will be available for upload functionality.
+      // --- Wanderer Authentication (only when --upload is set) -----------------
       let wandererSession: { host: string; cookie: string } | null = null;
-      try {
-        wandererSession = await resolveWandererAuth();
-        if (wandererSession) {
-          logger.debug(`Wanderer authentication successful — session ready for ${wandererSession.host}`);
+      if (options.upload) {
+        wandererSession = await resolveWandererAuth(true);
+        if (!wandererSession) {
+          logger.error('Wanderer authentication is required for upload. Exiting.');
+          process.exit(1);
         }
-      } catch (err) {
-        logger.debug(`Wanderer authentication skipped: ${err instanceof Error ? err.message : String(err)}`);
+        logger.debug(`Wanderer authentication successful — session ready for ${wandererSession.host}`);
       }
       
       // Validate costing model
@@ -245,24 +246,56 @@ program
       
 
 /**
+ * Map GPX track type to Wanderer difficulty.
+ * 
+ * Derives difficulty from the track type string (e.g., "mtb_easy" → "easy").
+ * Falls back to "moderate" for unrecognized types.
+ */
+function mapTypeToDifficulty(trackType?: string): string | undefined {
+  if (!trackType) return undefined;
+
+  const type = trackType.toLowerCase();
+
+  // Explicit easy types
+  if (type.includes('easy') || type === 'walking' || type === 'walk') {
+    return 'easy';
+  }
+
+  // Explicit difficult types
+  if (type.includes('difficult') || type.includes('extreme') || type === 'mtb' || type === 'enduro') {
+    return 'difficult';
+  }
+
+  // Moderate types (default for most activity types)
+  if (type.includes('moderate') || type === 'hike' || type === 'hiking' || type === 'bike' || type === 'cycling') {
+    return 'moderate';
+  }
+
+  // For known sport codes that don't have an explicit difficulty hint, default to moderate
+  return 'moderate';
+}
+
+/**
  * Resolve Wanderer authentication:
  * 1. Load stored credentials
  * 2. Validate cached cookie or re-authenticate
- * 3. Prompt user if credentials are missing or invalid
+ * 3. Prompt user if credentials are missing or invalid (when promptOnFailure is true)
  * 
  * Returns the authenticated session (host + cookie) or null if authentication
- * is skipped or fails. This is used to prepare for future upload functionality.
+ * is skipped or fails.
  */
-async function resolveWandererAuth(): Promise<{ host: string; cookie: string } | null> {
+async function resolveWandererAuth(promptOnFailure: boolean = false): Promise<{ host: string; cookie: string } | null> {
   // Load stored Wanderer credentials
   let wandererCreds = loadWandererCredentials();
   
   if (!wandererCreds) {
     logger.debug('No stored Wanderer credentials found');
-    // Don't prompt here — upload is not yet implemented, so we just skip auth
-    // When upload is implemented, this should prompt:
-    // wandererCreds = await promptForWandererCredentials();
-    // if (!wandererCreds) return null;
+    if (promptOnFailure) {
+      wandererCreds = await promptForWandererCredentials();
+      if (!wandererCreds) return null;
+      // promptForWandererCredentials already logs in and saves the cookie
+      return { host: wandererCreds.host, cookie: wandererCreds.cookie! };
+    }
     return null;
   }
   
@@ -283,11 +316,11 @@ async function resolveWandererAuth(): Promise<{ host: string; cookie: string } |
         logger.debug('Wanderer cookie refreshed');
       } catch (err) {
         logger.debug(`Wanderer re-login failed: ${err instanceof Error ? err.message : String(err)}`);
-        // Don't prompt for re-login here — just return null
-        // When upload is implemented, this should prompt:
-        // wandererCreds = await promptForWandererCredentials('\nStored Wanderer credentials are no longer valid. Please log in again.\n');
-        // if (!wandererCreds) return null;
-        // cookie = wandererCreds.cookie;
+        if (promptOnFailure) {
+          wandererCreds = await promptForWandererCredentials('\nStored Wanderer credentials are no longer valid. Please log in again.\n');
+          if (!wandererCreds) return null;
+          return { host: wandererCreds.host, cookie: wandererCreds.cookie! };
+        }
         return null;
       }
     } else {
@@ -303,6 +336,11 @@ async function resolveWandererAuth(): Promise<{ host: string; cookie: string } |
       logger.debug('Wanderer login successful');
     } catch (err) {
       logger.debug(`Wanderer login failed: ${err instanceof Error ? err.message : String(err)}`);
+      if (promptOnFailure) {
+        wandererCreds = await promptForWandererCredentials('\nWanderer login failed. Please check your credentials.\n');
+        if (!wandererCreds) return null;
+        return { host: wandererCreds.host, cookie: wandererCreds.cookie! };
+      }
       return null;
     }
   }
@@ -310,6 +348,164 @@ async function resolveWandererAuth(): Promise<{ host: string; cookie: string } |
   return { host: wandererCreds.host, cookie: cookie! };
 }
       logger.success(`Output written to: ${outputPath}`);
+
+      // --- Upload to Wanderer (if --upload is set) ----------------------------
+      if (options.upload && wandererSession) {
+        logger.info('\nUploading to Wanderer...');
+
+        // Read the serialized GPX for upload
+        const uploadGpx = readFileSync(outputPath, 'utf-8');
+
+        // Resolve category and difficulty metadata (needed for both upload and update)
+        const categoryMapping = track.type ? mapSportToCategory(track.type) : null;
+        const difficulty = mapTypeToDifficulty(track.type);
+
+        let trailId: string = '';
+        let trailName: string = '';
+        let isNewTrail = true;
+        let skipTagCreation = false;
+
+        // Optimistic update flow if source-id is provided
+        if (options.sourceId) {
+          const sourceTag = `gpx2wanderer-${options.sourceId}`;
+          logger.debug(`Checking for existing trail with tag: ${sourceTag}`);
+          
+          const existingTrailId = await findTrailBySourceTag(
+            wandererSession.host,
+            wandererSession.cookie,
+            sourceTag
+          );
+
+          if (existingTrailId) {
+            logger.info(`Found existing trail ID: ${existingTrailId}`);
+            
+            // Try to update the existing trail
+            try {
+              logger.info('Attempting to update existing trail...');
+              await updateTrail(
+                wandererSession.host,
+                wandererSession.cookie,
+                existingTrailId,
+                difficulty,
+                categoryMapping?.category,
+                categoryMapping?.subcategory,
+                undefined, // tagIds - not needed, trail already has tag
+                uploadGpx, // Update the GPX track data
+              );
+              
+              trailId = existingTrailId;
+              trailName = 'Existing trail';
+              isNewTrail = false;
+              skipTagCreation = true; // Trail already has tag from previous upload
+              
+              logger.success('Trail updated successfully');
+              logger.info(`  Trail ID: ${trailId}`);
+              logger.info(`  URL: ${wandererSession.host}/trail/${trailId}`);
+            } catch (updateErr) {
+              // Update failed - trail was likely deleted
+              logger.warn(`Update failed: ${updateErr instanceof Error ? updateErr.message : String(updateErr)}`);
+              logger.info('Trail may have been deleted. Cleaning up orphaned tag...');
+              
+              // Find and delete the orphaned tag
+              const tags = await listTags(wandererSession.host, wandererSession.cookie);
+              const orphanedTag = tags.find(t => t.name === sourceTag);
+              if (orphanedTag) {
+                await deleteTag(wandererSession.host, wandererSession.cookie, orphanedTag.id);
+                logger.success('Orphaned tag deleted');
+              }
+              
+              // Fall through to upload as new
+              trailId = '';
+              trailName = '';
+            }
+          }
+        }
+
+        // Upload as new if no existing trail or update failed
+        if (!trailId) {
+          try {
+            const trail = await uploadTrail(
+              wandererSession.host,
+              wandererSession.cookie,
+              uploadGpx,
+              trackName,
+            );
+
+            trailId = trail.id;
+            trailName = trail.name;
+
+            logger.success('Trail uploaded successfully!');
+            logger.info(`  Trail ID: ${trail.id}`);
+            logger.info(`  Name: ${trail.name}`);
+            if (trail.distance) {
+              logger.info(`  Distance: ${(trail.distance / 1000).toFixed(2)} km`);
+            }
+            if (trail.elevation_gain) {
+              logger.info(`  Elevation gain: ${trail.elevation_gain.toFixed(0)} m`);
+            }
+            logger.info(`  URL: ${wandererSession.host}/trail/${trail.id}`);
+          } catch (err) {
+            // If it's a duplicate, update the existing trail instead
+            if (err instanceof DuplicateTrailError) {
+              logger.warn(`Duplicate trail detected: "${err.trailName}" (${err.trailId})`);
+              logger.info('Updating existing trail instead...');
+              trailId = err.trailId;
+              trailName = err.trailName;
+              isNewTrail = false;
+              skipTagCreation = true; // Trail already exists with tag from previous upload
+            } else {
+              logger.error(`Upload failed: ${err instanceof Error ? err.message : String(err)}`);
+              process.exit(1);
+            }
+          }
+        }
+
+        // Create source tag if source-id is provided and we have a trail ID
+        let sourceTagId: string | undefined;
+        if (options.sourceId && trailId && !skipTagCreation) {
+          const sourceTag = `gpx2wanderer-${options.sourceId}`;
+          logger.info(`Creating source tag: ${sourceTag}`);
+          try {
+            const tag = await createTag(wandererSession.host, wandererSession.cookie, sourceTag);
+            sourceTagId = tag.id;
+            logger.success('Source tag created');
+          } catch (err) {
+            logger.warn(`Failed to create source tag: ${err instanceof Error ? err.message : String(err)}`);
+          }
+        }
+
+        // Update trail with category, difficulty, and tag metadata
+        if (trailId && (categoryMapping || difficulty || sourceTagId)) {
+          logger.info(`Updating trail metadata${isNewTrail ? '' : ' on existing trail'}...`);
+          try {
+            await updateTrail(
+              wandererSession.host,
+              wandererSession.cookie,
+              trailId,
+              difficulty,
+              categoryMapping?.category,
+              categoryMapping?.subcategory,
+              sourceTagId ? [sourceTagId] : undefined,
+              isNewTrail ? uploadGpx : undefined, // Only send GPX for new trails
+            );
+            if (categoryMapping) {
+              logger.info(`  Category: ${categoryMapping.category}${categoryMapping.subcategory ? ` (${categoryMapping.subcategory})` : ''}`);
+            }
+            if (difficulty) {
+              logger.info(`  Difficulty: ${difficulty}`);
+            }
+            if (sourceTagId) {
+              logger.info(`  Tag: gpx2wanderer-${options.sourceId}`);
+            }
+            logger.success('Trail metadata updated');
+            logger.info(`  URL: ${wandererSession.host}/trail/${trailId}`);
+          } catch (err) {
+            logger.error(`Metadata update failed: ${err instanceof Error ? err.message : String(err)}`);
+            process.exit(1);
+          }
+        }
+      }
+
       console.log(chalk.green('\n✓ Processing complete!'));
       
     } catch (error) {

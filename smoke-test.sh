@@ -24,12 +24,12 @@ npm run build
 echo "✓ Build successful"
 echo ""
 
-# Run the pipeline
-echo "Running pipeline..."
-echo "Command: node dist/index.js $TEST_FILE -v --post-simplify --turn-threshold 120"
+# Run the pipeline with upload and source ID
+echo "Running pipeline with upload to Wanderer..."
+echo "Command: node dist/index.js $TEST_FILE -v --post-simplify --turn-threshold 120 --upload --source-id test-001"
 echo ""
 
-node dist/index.js "$TEST_FILE" -v --post-simplify --turn-threshold 120
+node dist/index.js "$TEST_FILE" -v --post-simplify --turn-threshold 120 --upload --source-id test-001
 
 echo ""
 echo "=== Smoke Test Complete ==="

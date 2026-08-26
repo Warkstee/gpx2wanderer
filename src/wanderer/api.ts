@@ -131,6 +131,20 @@ export async function validateCookie(host: string, cookie: string): Promise<bool
 }
 
 /**
+ * Error thrown when a trail upload is rejected because a duplicate already exists.
+ * Carries the existing trail's id and name so the caller can update it instead.
+ */
+export class DuplicateTrailError extends Error {
+  constructor(
+    public readonly trailId: string,
+    public readonly trailName: string,
+  ) {
+    super(`Duplicate trail "${trailName}" (id: ${trailId})`);
+    this.name = 'DuplicateTrailError';
+  }
+}
+
+/**
  * Response from the trail upload endpoint.
  */
 export interface TrailUploadResponse {
@@ -169,7 +183,6 @@ export interface TrailUploadResponse {
  * @param cookie - Session cookie for authentication
  * @param gpxContent - GPX XML content as a string
  * @param name - Trail name (optional, Wanderer will infer from GPX if not provided)
- * @param ignoreDuplicates - If true, skip duplicate detection (default: false)
  * @returns Trail object with id, name, distance, elevation, etc.
  * @throws Error if upload fails
  */
@@ -178,7 +191,6 @@ export async function uploadTrail(
   cookie: string,
   gpxContent: string,
   name?: string,
-  ignoreDuplicates: boolean = false,
 ): Promise<TrailUploadResponse> {
   const url = `${host}/api/v1/trail/upload`;
 
@@ -193,9 +205,6 @@ export async function uploadTrail(
   if (name) {
     formData.append('name', name);
   }
-
-  // Add ignoreDuplicates flag
-  formData.append('ignoreDuplicates', String(ignoreDuplicates));
 
   let response: Response;
   try {
@@ -212,6 +221,18 @@ export async function uploadTrail(
 
   if (response.status === 400) {
     const body = await response.text();
+    // Check if this is a duplicate trail error — the API returns JSON with
+    // an "id" field identifying the existing trail.
+    try {
+      const errorData = JSON.parse(body) as { message?: string; id?: string; name?: string };
+      if (errorData.message === 'Duplicate trail' && errorData.id) {
+        throw new DuplicateTrailError(errorData.id, errorData.name || name || 'Unknown');
+      }
+    } catch (parseErr) {
+      // If it's already a DuplicateTrailError, re-throw it
+      if (parseErr instanceof DuplicateTrailError) throw parseErr;
+      // Otherwise fall through to the generic error
+    }
     throw new Error(`Invalid or empty GPX file: ${body}`);
   }
   if (response.status === 401 || response.status === 403) {
@@ -297,20 +318,22 @@ export async function getSubcategories(host: string, cookie: string): Promise<Ar
 }
 
 /**
- * Update an existing trail's metadata (category, difficulty, etc.).
+ * Update an existing trail's metadata and/or GPX content.
  * 
- * Makes a POST request to /api/v1/trail/form/{id} with only the fields
- * that need to be updated. This is used after uploadTrail() to set
- * category and difficulty that the upload endpoint doesn't accept.
+ * Makes a POST request to /api/v1/trail/form/{id} with the fields
+ * that need to be updated. Supports updating category, difficulty, tags,
+ * and optionally the GPX track data.
  * 
  * Category and subcategory names are resolved to IDs via the API.
  * 
  * @param host - Wanderer instance base URL
  * @param cookie - Session cookie for authentication
- * @param trailId - Trail ID returned from uploadTrail()
+ * @param trailId - Trail ID to update
  * @param difficulty - Difficulty grade (easy, moderate, difficult)
  * @param categoryName - Category name (e.g., "Hiking", "Biking")
  * @param subcategoryName - Optional subcategory name (e.g., "MTB", "Road")
+ * @param tagIds - Optional array of tag IDs to associate with the trail
+ * @param gpxContent - Optional GPX XML content to update the track geometry
  * @throws Error if update fails
  */
 export async function updateTrail(
@@ -320,6 +343,8 @@ export async function updateTrail(
   difficulty?: string,
   categoryName?: string,
   subcategoryName?: string,
+  tagIds?: string[],
+  gpxContent?: string,
 ): Promise<void> {
   const url = `${host}/api/v1/trail/form/${trailId}`;
 
@@ -353,6 +378,15 @@ export async function updateTrail(
   if (difficulty) formData.append('difficulty', difficulty);
   if (categoryId) formData.append('category', categoryId);
   if (subcategoryId) formData.append('subcategory', subcategoryId);
+  if (tagIds && tagIds.length > 0) {
+    // Send tags as a JSON array
+    formData.append('tags', JSON.stringify(tagIds));
+  }
+  if (gpxContent) {
+    // Add GPX file as a Blob
+    const gpxBlob = new Blob([gpxContent], { type: 'application/gpx+xml' });
+    formData.append('gpx', gpxBlob, 'trail.gpx');
+  }
 
   let response: Response;
   try {
@@ -371,4 +405,180 @@ export async function updateTrail(
     const body = await response.text();
     throw new Error(`Trail update failed (${response.status}): ${body}`);
   }
+}
+
+/**
+ * Tag structure from Wanderer API
+ */
+export interface Tag {
+  id: string;
+  name: string;
+  author: string;
+  created: string;
+  updated: string;
+}
+
+/**
+ * List all tags from the Wanderer API.
+ * 
+ * @param host - Wanderer instance base URL
+ * @param cookie - Session cookie for authentication
+ * @returns Array of tags
+ * @throws Error if fetch fails
+ */
+export async function listTags(host: string, cookie: string): Promise<Tag[]> {
+  const url = `${host}/api/v1/tag`;
+  
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Cookie': cookie,
+      },
+    });
+  } catch (err) {
+    throw new Error(`Network error during tag listing: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Failed to list tags (${response.status}): ${body}`);
+  }
+
+  const data = await response.json() as { items: Tag[] };
+  return data.items;
+}
+
+/**
+ * Create a new tag in Wanderer.
+ * 
+ * @param host - Wanderer instance base URL
+ * @param cookie - Session cookie for authentication
+ * @param name - Tag name (e.g., "gpx2wanderer-0123456789")
+ * @returns Created tag
+ * @throws Error if creation fails
+ */
+export async function createTag(
+  host: string,
+  cookie: string,
+  name: string,
+): Promise<Tag> {
+  const url = `${host}/api/v1/tag`;
+
+  const body: Record<string, string> = { name };
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Cookie': cookie,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    throw new Error(`Network error during tag creation: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Failed to create tag (${response.status}): ${errorBody}`);
+  }
+
+  return await response.json() as Tag;
+}
+
+/**
+ * Delete a tag from Wanderer.
+ * 
+ * @param host - Wanderer instance base URL
+ * @param cookie - Session cookie for authentication
+ * @param tagId - Tag ID to delete
+ * @throws Error if deletion fails
+ */
+export async function deleteTag(host: string, cookie: string, tagId: string): Promise<void> {
+  const url = `${host}/api/v1/tag/${tagId}`;
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Cookie': cookie,
+      },
+    });
+  } catch (err) {
+    throw new Error(`Network error during tag deletion: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Failed to delete tag (${response.status}): ${body}`);
+  }
+}
+
+/**
+ * Find an existing trail by source tag (e.g., "gpx2wanderer-{sourceId}").
+ * 
+ * Uses the multi-index search endpoint to search for trails with the given tag.
+ * 
+ * @param host - Wanderer instance base URL
+ * @param cookie - Session cookie for authentication
+ * @param sourceTag - Source tag name (e.g., "gpx2wanderer-0123456789")
+ * @returns Trail ID if found, null otherwise
+ */
+export async function findTrailBySourceTag(
+  host: string,
+  cookie: string,
+  sourceTag: string,
+): Promise<string | null> {
+  const url = `${host}/api/v1/search/multi`;
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Cookie': cookie,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        queries: [
+          {
+            indexUid: 'trails',
+            q: sourceTag,
+          },
+        ],
+      }),
+    });
+  } catch (err) {
+    throw new Error(`Network error during trail search: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Failed to search trails (${response.status}): ${body}`);
+  }
+
+  const data = await response.json() as {
+    results: Array<{
+      indexUid: string;
+      hits: Array<{ id: string; tags?: string[] }>;
+    }>;
+  };
+
+  // Find the trails result and check if any hit has our tag
+  const trailsResult = data.results.find(r => r.indexUid === 'trails');
+  if (!trailsResult || trailsResult.hits.length === 0) {
+    return null;
+  }
+
+  // Find a trail that has our exact tag
+  const matchingTrail = trailsResult.hits.find(hit => 
+    hit.tags && hit.tags.includes(sourceTag)
+  );
+
+  return matchingTrail?.id ?? null;
 }
