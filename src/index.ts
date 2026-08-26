@@ -13,7 +13,9 @@ import { serializeGPX } from './gpx/serializer.js';
 import { writeGpxFile, generateOutputFilename } from './output/writer.js';
 import { buildMultiSegmentTrack } from './waypoints/segment-builder.js';
 import { postSimplifyWaypoints } from './waypoints/post-simplifier.js';
-import { loadValhallaConfig, hasValhallaConfig, saveValhallaConfig } from './wanderer/credentials.js';
+import { loadValhallaConfig, hasValhallaConfig, saveValhallaConfig, loadWandererCredentials, saveWandererCookie, type WandererCredentials } from './wanderer/credentials.js';
+import { promptForWandererCredentials } from './wanderer/prompts.js';
+import { login as wandererLogin, validateCookie } from './wanderer/api.js';
 import * as logger from './utils/logger.js';
 import type { GPXFile, GPXTrack, GPXPoint } from './gpx/types.js';
 
@@ -31,16 +33,31 @@ program
 program
   .command('config')
   .description('Manage configuration and credentials')
-  .argument('<service>', 'Service to configure (valhalla)')
-  .argument('<url>', 'URL for the service')
-  .action((service: string, url: string) => {
+  .argument('<service>', 'Service to configure (valhalla, wanderer)')
+  .argument('[url]', 'URL for the service (required for valhalla)')
+  .action(async (service: string, url: string) => {
     try {
       if (service === 'valhalla') {
+        if (!url) {
+          console.error(chalk.red('Error: URL is required for Valhalla configuration'));
+          console.error(chalk.gray('Usage: gpx2wanderer config valhalla <url>'));
+          process.exit(1);
+        }
         saveValhallaConfig({ url });
         console.log(chalk.green('✓ Valhalla configuration saved (encrypted)'));
         console.log(chalk.gray(`  Stored in: ~/.gpx2wanderer/.env`));
+      } else if (service === 'wanderer') {
+        // Interactive prompt for Wanderer credentials
+        const creds = await promptForWandererCredentials();
+        if (creds) {
+          console.log(chalk.green('✓ Wanderer credentials saved (encrypted)'));
+          console.log(chalk.gray(`  Stored in: ~/.gpx2wanderer/.env`));
+        } else {
+          console.error(chalk.red('Error: Failed to configure Wanderer credentials'));
+          process.exit(1);
+        }
       } else {
-        console.error(chalk.red(`Error: Unknown service "${service}". Available services: valhalla`));
+        console.error(chalk.red(`Error: Unknown service "${service}". Available services: valhalla, wanderer`));
         process.exit(1);
       }
     } catch (error) {
@@ -66,6 +83,19 @@ program
       
       // Set verbose mode
       logger.setVerbose(options.verbose);
+      
+      // --- Wanderer Authentication (lazy, for future upload) -------------------
+      // This resolves Wanderer credentials and validates/refreshes the session cookie.
+      // The authenticated session will be available for upload functionality.
+      let wandererSession: { host: string; cookie: string } | null = null;
+      try {
+        wandererSession = await resolveWandererAuth();
+        if (wandererSession) {
+          logger.debug(`Wanderer authentication successful — session ready for ${wandererSession.host}`);
+        }
+      } catch (err) {
+        logger.debug(`Wanderer authentication skipped: ${err instanceof Error ? err.message : String(err)}`);
+      }
       
       // Validate costing model
       const validCostings = ['bike', 'hike'];
@@ -213,6 +243,72 @@ program
       logger.info('Writing output file...');
       writeGpxFile(gpxXml, outputPath);
       
+
+/**
+ * Resolve Wanderer authentication:
+ * 1. Load stored credentials
+ * 2. Validate cached cookie or re-authenticate
+ * 3. Prompt user if credentials are missing or invalid
+ * 
+ * Returns the authenticated session (host + cookie) or null if authentication
+ * is skipped or fails. This is used to prepare for future upload functionality.
+ */
+async function resolveWandererAuth(): Promise<{ host: string; cookie: string } | null> {
+  // Load stored Wanderer credentials
+  let wandererCreds = loadWandererCredentials();
+  
+  if (!wandererCreds) {
+    logger.debug('No stored Wanderer credentials found');
+    // Don't prompt here — upload is not yet implemented, so we just skip auth
+    // When upload is implemented, this should prompt:
+    // wandererCreds = await promptForWandererCredentials();
+    // if (!wandererCreds) return null;
+    return null;
+  }
+  
+  logger.debug('Loaded stored Wanderer credentials');
+  
+  // Validate cached cookie or re-login
+  let cookie = wandererCreds.cookie;
+  
+  if (cookie) {
+    const isValid = await validateCookie(wandererCreds.host, cookie);
+    
+    if (!isValid) {
+      logger.debug('Cached Wanderer cookie expired — re-authenticating...');
+      try {
+        const loginResult = await wandererLogin(wandererCreds.host, wandererCreds.username, wandererCreds.password);
+        cookie = loginResult.cookie;
+        saveWandererCookie(cookie);
+        logger.debug('Wanderer cookie refreshed');
+      } catch (err) {
+        logger.debug(`Wanderer re-login failed: ${err instanceof Error ? err.message : String(err)}`);
+        // Don't prompt for re-login here — just return null
+        // When upload is implemented, this should prompt:
+        // wandererCreds = await promptForWandererCredentials('\nStored Wanderer credentials are no longer valid. Please log in again.\n');
+        // if (!wandererCreds) return null;
+        // cookie = wandererCreds.cookie;
+        return null;
+      }
+    } else {
+      logger.debug('Cached Wanderer cookie is valid');
+    }
+  } else {
+    // No cached cookie — login now
+    logger.debug('No cached Wanderer cookie — authenticating...');
+    try {
+      const loginResult = await wandererLogin(wandererCreds.host, wandererCreds.username, wandererCreds.password);
+      cookie = loginResult.cookie;
+      saveWandererCookie(cookie);
+      logger.debug('Wanderer login successful');
+    } catch (err) {
+      logger.debug(`Wanderer login failed: ${err instanceof Error ? err.message : String(err)}`);
+      return null;
+    }
+  }
+  
+  return { host: wandererCreds.host, cookie: cookie! };
+}
       logger.success(`Output written to: ${outputPath}`);
       console.log(chalk.green('\n✓ Processing complete!'));
       
