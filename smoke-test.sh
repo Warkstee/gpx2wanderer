@@ -26,10 +26,10 @@ echo ""
 
 # Run the pipeline
 echo "Running pipeline..."
-echo "Command: node dist/index.js $TEST_FILE -v"
+echo "Command: node dist/index.js $TEST_FILE -v --post-simplify --turn-threshold 120"
 echo ""
 
-node dist/index.js "$TEST_FILE" -v
+node dist/index.js "$TEST_FILE" -v --post-simplify --turn-threshold 120
 
 echo ""
 echo "=== Smoke Test Complete ==="

@@ -12,6 +12,7 @@ import { ValhallaClient } from './waypoints/valhalla.js';
 import { serializeGPX } from './gpx/serializer.js';
 import { writeGpxFile, generateOutputFilename } from './output/writer.js';
 import { buildMultiSegmentTrack } from './waypoints/segment-builder.js';
+import { postSimplifyWaypoints } from './waypoints/post-simplifier.js';
 import { loadValhallaConfig, hasValhallaConfig, saveValhallaConfig } from './wanderer/credentials.js';
 import * as logger from './utils/logger.js';
 import type { GPXFile, GPXTrack, GPXPoint } from './gpx/types.js';
@@ -56,6 +57,8 @@ program
   .option('-i, --max-iterations <count>', 'Maximum Valhalla validation iterations', '10')
   .option('-c, --costing <model>', 'Valhalla costing model (bike or hike)', 'bike')
   .option('-o, --output <path>', 'Output GPX file path (default: temp directory)')
+  .option('--post-simplify', 'Enable post-processing waypoint simplification', false)
+  .option('--turn-threshold <degrees>', 'Turn angle threshold for anchor point detection', '150')
   .action(async (gpxFile: string, options: any) => {
     try {
       console.log(chalk.blue('gpx2wanderer v0.1.0'));
@@ -151,10 +154,25 @@ program
       logger.info(`  Max divergence: ${result.maxDivergence.toFixed(1)}m`);
       logger.info(`  Converged: ${result.converged ? 'Yes' : 'No'}`);
       
-      // Step 5: Build multi-segment track from waypoints
+      // Step 5: Post-processing simplification (optional)
+      let finalWaypoints = result.waypoints;
+      if (options.postSimplify) {
+        logger.info('Starting post-processing simplification...');
+        const postResult = await postSimplifyWaypoints(result.waypoints, allPoints, valhalla, {
+          tolerance: parseFloat(options.tolerance),
+          turnThreshold: parseFloat(options.turnThreshold),
+          costing: options.costing,
+        });
+        finalWaypoints = postResult.waypoints;
+        logger.info(`  Removed: ${postResult.removed} waypoints`);
+        logger.info(`  Valhalla calls: ${postResult.valhallaCalls}`);
+        logger.info(`  Final waypoints: ${finalWaypoints.length}`);
+      }
+      
+      // Step 6: Build multi-segment track from waypoints
       logger.info('Building multi-segment track...');
-      const segments = buildMultiSegmentTrack(result.waypoints, allPoints);
-      logger.info(`Created ${segments.length} segment(s) from ${result.waypoints.length} waypoints`);
+      const segments = buildMultiSegmentTrack(finalWaypoints, allPoints);
+      logger.info(`Created ${segments.length} segment(s) from ${finalWaypoints.length} waypoints`);
       
       const outputTrack: GPXTrack = {
         name: track.name,
