@@ -19,6 +19,16 @@ export interface DivergenceResult {
 }
 
 /**
+ * Result of finding minimum distance to a track segment
+ */
+interface SegmentDistanceResult {
+  /** Distance in meters */
+  distance: number;
+  /** Index of the closest segment (between point i and i+1) */
+  segmentIndex: number;
+}
+
+/**
  * Calculate distance between two points in meters (Haversine formula)
  */
 export function haversineDistance(p1: GPXPoint, p2: GPXPoint): number {
@@ -84,36 +94,52 @@ export function pointToSegmentDistance(
  * Find the minimum distance from a point to any segment in the track
  * Uses early exit optimization: stops checking segments once we're past
  * the point's approximate position along the track
+ * 
+ * @returns Object with distance and the index of the closest segment
  */
 function minDistanceToTrack(
   point: GPXPoint,
   track: GPXPoint[],
   startIndex: number = 0
-): number {
-  if (track.length === 0) return Infinity;
-  if (track.length === 1) return haversineDistance(point, track[0]);
+): SegmentDistanceResult {
+  if (track.length === 0) return { distance: Infinity, segmentIndex: 0 };
+  if (track.length === 1) return { distance: haversineDistance(point, track[0]), segmentIndex: 0 };
 
   let minDist = Infinity;
+  let minSegmentIndex = startIndex;
 
   // Check segments starting from startIndex
   for (let i = startIndex; i < track.length - 1; i++) {
     const dist = pointToSegmentDistance(point, track[i], track[i + 1]);
-    minDist = Math.min(minDist, dist);
+    if (dist < minDist) {
+      minDist = dist;
+      minSegmentIndex = i;
+    }
 
     // Early exit: if we've found a very close match, stop searching
-    if (dist < 1) return dist; // Within 1 meter, good enough
+    if (dist < 1) return { distance: dist, segmentIndex: i }; // Within 1 meter, good enough
   }
 
   // Also check the last point
   const lastPointDist = haversineDistance(point, track[track.length - 1]);
-  minDist = Math.min(minDist, lastPointDist);
+  if (lastPointDist < minDist) {
+    minDist = lastPointDist;
+    minSegmentIndex = track.length - 2; // Last segment
+  }
 
-  return minDist;
+  return { distance: minDist, segmentIndex: minSegmentIndex };
 }
 
 /**
  * Find point of maximum divergence between two tracks
- * Uses segment-based comparison for accuracy and early exit for performance
+ * Uses ordered traversal to ensure we compare points in sequence
+ * 
+ * Algorithm:
+ * - Traverse original track points in order
+ * - For each point, find closest segment in routed track starting from last matched segment
+ * - This prevents "up the road" false positives where a point matches a segment far ahead
+ * - Multiple original points can match the same segment (when routed track is denser)
+ * - We never go backwards to earlier segments
  *
  * @param original - The original track to analyze
  * @param routed - The reference track to compare against
@@ -136,14 +162,23 @@ export function findMaxDivergence(
   let maxDistance = 0;
   let maxIndex = 0;
   let maxPoint = original[0];
+  
+  // Track the last matched segment index for ordered traversal
+  // Start at 0, only move forward
+  let lastSegmentIndex = 0;
 
   // For each point in original track, find minimum distance to routed track
+  // using ordered traversal (only search segments from lastSegmentIndex onward)
   for (let i = 0; i < original.length; i++) {
-    const minDist = minDistanceToTrack(original[i], routed);
-    divergenceProfile[i] = minDist;
+    const result = minDistanceToTrack(original[i], routed, lastSegmentIndex);
+    divergenceProfile[i] = result.distance;
 
-    if (minDist > maxDistance) {
-      maxDistance = minDist;
+    // Update lastSegmentIndex to the matched segment (or keep it if same)
+    // This ensures we never go backwards
+    lastSegmentIndex = result.segmentIndex;
+
+    if (result.distance > maxDistance) {
+      maxDistance = result.distance;
       maxIndex = i;
       maxPoint = original[i];
     }
