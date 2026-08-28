@@ -16,6 +16,7 @@ import { postSimplifyWaypoints } from './waypoints/post-simplifier.js';
 import { loadValhallaConfig, hasValhallaConfig, saveValhallaConfig, loadWandererCredentials, saveWandererCookie, type WandererCredentials } from './wanderer/credentials.js';
 import { promptForWandererCredentials } from './wanderer/prompts.js';
 import { login as wandererLogin, validateCookie, uploadTrail, updateTrail, DuplicateTrailError, findTrailBySourceTag, createTag, deleteTag, listTags, cleanupOrphanedTags } from './wanderer/api.js';
+import { promptForKomootCredentials } from './providers/komoot/prompts.js';
 import { mapSportToCategory } from './wanderer/category-mapping.js';
 import * as logger from './utils/logger.js';
 import type { GPXFile, GPXTrack, GPXPoint } from './gpx/types.js';
@@ -137,7 +138,7 @@ program
 program
   .command('config')
   .description('Manage configuration and credentials')
-  .argument('<service>', 'Service to configure (valhalla, wanderer)')
+  .argument('<service>', 'Service to configure (valhalla, wanderer, komoot)')
   .argument('[url]', 'URL for the service (required for valhalla)')
   .action(async (service: string, url: string) => {
     try {
@@ -160,8 +161,18 @@ program
           console.error(chalk.red('Error: Failed to configure Wanderer credentials'));
           process.exit(1);
         }
+      } else if (service === 'komoot') {
+        // Interactive prompt for Komoot credentials
+        const creds = await promptForKomootCredentials();
+        if (creds) {
+          console.log(chalk.green('✓ Komoot credentials saved (encrypted)'));
+          console.log(chalk.gray(`  Stored in: ~/.gpx2wanderer/.env`));
+        } else {
+          console.error(chalk.red('Error: Failed to configure Komoot credentials'));
+          process.exit(1);
+        }
       } else {
-        console.error(chalk.red(`Error: Unknown service "${service}". Available services: valhalla, wanderer`));
+        console.error(chalk.red(`Error: Unknown service "${service}". Available services: valhalla, wanderer, komoot`));
         process.exit(1);
       }
     } catch (error) {
