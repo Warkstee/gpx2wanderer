@@ -1,14 +1,14 @@
 /**
  * Tests for multi-provider credential management
  * 
- * These tests backup and restore the real ~/.gpx2wanderer/.env file to avoid
- * destroying existing credentials that are needed for smoke tests and integration tests.
+ * These tests use a temporary directory for the .env file to avoid
+ * interfering with the real ~/.gpx2wanderer/.env used by other tests.
  */
 
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from '@jest/globals';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, rmSync, mkdtempSync } from 'fs';
 import { resolve } from 'path';
-import { homedir } from 'os';
+import { tmpdir } from 'os';
 import {
   hasKomootCredentials,
   loadKomootCredentials,
@@ -20,40 +20,40 @@ import {
   loadWandererCredentials,
   saveWandererCredentials,
   saveWandererCookie,
+  setConfigPaths,
+  resetConfigPaths,
   type KomootCredentials,
   type StravaCredentials,
   type WandererCredentials,
 } from '../../providers/auth/credentials.js';
 
-const CONFIG_DIR = resolve(homedir(), '.gpx2wanderer');
-const ENV_PATH = resolve(CONFIG_DIR, '.env');
-
 describe('Credential Management', () => {
-  let backupContent: string | null = null;
-  let hadExistingConfig = false;
+  let tempDir: string;
+  let tempConfigDir: string;
+  let tempEnvPath: string;
 
   beforeAll(() => {
-    // Backup real config if it exists
-    if (existsSync(ENV_PATH)) {
-      backupContent = readFileSync(ENV_PATH, 'utf-8');
-      hadExistingConfig = true;
-    }
+    // Create a temporary directory for all tests in this suite
+    tempDir = mkdtempSync(resolve(tmpdir(), 'gpx2wanderer-cred-test-'));
+    tempConfigDir = tempDir;
+    tempEnvPath = resolve(tempDir, '.env');
+
+    // Point the credentials module to the temp directory
+    setConfigPaths(tempConfigDir, tempEnvPath);
   });
 
   beforeEach(() => {
-    // Clear credentials between tests to ensure isolation, but preserve the backup
-    if (existsSync(CONFIG_DIR)) {
-      writeFileSync(ENV_PATH, '', { mode: 0o600 });
+    // Clear the temp env file between tests for isolation
+    if (existsSync(tempEnvPath)) {
+      writeFileSync(tempEnvPath, '', { mode: 0o600 });
     }
   });
 
   afterAll(() => {
-    // Restore real config if it existed
-    if (hadExistingConfig && backupContent) {
-      if (!existsSync(CONFIG_DIR)) {
-        mkdirSync(CONFIG_DIR, { recursive: true, mode: 0o700 });
-      }
-      writeFileSync(ENV_PATH, backupContent, { mode: 0o600 });
+    // Reset to real paths and clean up temp directory
+    resetConfigPaths();
+    if (existsSync(tempDir)) {
+      rmSync(tempDir, { recursive: true, force: true });
     }
   });
 
@@ -88,7 +88,7 @@ describe('Credential Management', () => {
 
       saveKomootCredentials(credentials);
 
-      const content = readFileSync(ENV_PATH, 'utf-8');
+      const content = readFileSync(tempEnvPath, 'utf-8');
       expect(content).not.toContain('test@example.com');
       expect(content).not.toContain('secret123');
       expect(content).toContain('KOMOOT_EMAIL_ENC=');
@@ -97,14 +97,14 @@ describe('Credential Management', () => {
 
     it('should return null if decryption fails', () => {
       // Create config directory and write invalid encrypted data
-      mkdirSync(CONFIG_DIR, { recursive: true });
+      mkdirSync(tempConfigDir, { recursive: true });
       const invalidContent = `# Komoot credentials (encrypted, machine-bound)
 KOMOOT_EMAIL_ENC=invalid-base64-data
 KOMOOT_PASSWORD_ENC=invalid-base64-data
 KOMOOT_TOKEN_ENC=invalid-base64-data
 KOMOOT_USERID_ENC=invalid-base64-data
 `;
-      writeFileSync(ENV_PATH, invalidContent);
+      writeFileSync(tempEnvPath, invalidContent);
 
       expect(loadKomootCredentials()).toBeNull();
     });
@@ -141,7 +141,7 @@ KOMOOT_USERID_ENC=invalid-base64-data
 
       saveStravaCredentials(credentials);
 
-      const content = readFileSync(ENV_PATH, 'utf-8');
+      const content = readFileSync(tempEnvPath, 'utf-8');
       expect(content).not.toContain('client-id-123');
       expect(content).not.toContain('client-secret-xyz');
       expect(content).toContain('STRAVA_CLIENT_ID_ENC=');
@@ -236,7 +236,7 @@ KOMOOT_USERID_ENC=invalid-base64-data
       expect(loadWandererCredentials()).toEqual(wandererCreds);
 
       // Verify the .env file contains all sections
-      const content = readFileSync(ENV_PATH, 'utf-8');
+      const content = readFileSync(tempEnvPath, 'utf-8');
       expect(content).toContain('# Komoot credentials');
       expect(content).toContain('# Strava credentials');
       expect(content).toContain('# Wanderer credentials');

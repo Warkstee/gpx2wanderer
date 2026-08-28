@@ -22,8 +22,28 @@ const IV_LENGTH = 16;
 const AUTH_TAG_LENGTH = 16;
 const KEY_LENGTH = 32;
 const APP_SALT = 'gpx2wanderer-credential-store-v1';
-const CONFIG_DIR = resolve(homedir(), '.gpx2wanderer');
-const ENV_PATH = resolve(CONFIG_DIR, '.env');
+
+// Config paths — can be overridden for testing via setConfigPaths()
+let CONFIG_DIR = resolve(homedir(), '.gpx2wanderer');
+let ENV_PATH = resolve(CONFIG_DIR, '.env');
+
+/**
+ * Override the config directory and env file path.
+ * Intended for testing only — allows tests to use a temp directory
+ * instead of the real ~/.gpx2wanderer/.env.
+ */
+export function setConfigPaths(configDir: string, envPath: string): void {
+  CONFIG_DIR = configDir;
+  ENV_PATH = envPath;
+}
+
+/**
+ * Reset config paths to defaults.
+ */
+export function resetConfigPaths(): void {
+  CONFIG_DIR = resolve(homedir(), '.gpx2wanderer');
+  ENV_PATH = resolve(CONFIG_DIR, '.env');
+}
 
 // ── Credential types ──────────────────────────────────────────────────
 
