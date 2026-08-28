@@ -17,9 +17,11 @@ import { loadValhallaConfig, hasValhallaConfig, saveValhallaConfig, loadWanderer
 import { promptForWandererCredentials } from './wanderer/prompts.js';
 import { login as wandererLogin, validateCookie, uploadTrail, updateTrail, DuplicateTrailError, findTrailBySourceTag, createTag, deleteTag, listTags, cleanupOrphanedTags } from './wanderer/api.js';
 import { promptForKomootCredentials } from './providers/komoot/prompts.js';
+import { KomootProvider } from './providers/komoot/index.js';
 import { mapSportToCategory } from './wanderer/category-mapping.js';
 import * as logger from './utils/logger.js';
 import type { GPXFile, GPXTrack, GPXPoint } from './gpx/types.js';
+import { writeFileSync } from 'fs';
 
 // Load environment variables (for backward compatibility)
 dotenv.config();
@@ -207,7 +209,7 @@ program
   });
 
 program
-  .argument('<gpx-file>', 'Path to GPX file to process')
+  .argument('[gpx-file]', 'Path to GPX file to process')
   .option('-v, --verbose', 'Enable verbose output for debugging', false)
   .option('-e, --epsilon <meters>', 'Douglas-Peucker simplification epsilon in meters', '30')
   .option('-t, --tolerance <meters>', 'Maximum divergence tolerance in meters', '50')
@@ -218,13 +220,50 @@ program
   .option('--turn-threshold <degrees>', 'Turn angle threshold for anchor point detection', '150')
   .option('--upload', 'Upload output GPX to Wanderer after processing', false)
   .option('--source-id <id>', 'Source identifier for optimistic update (e.g., komoot tour ID)')
-  .action(async (gpxFile: string, options: any) => {
+  .option('--komoot <route-id>', 'Download route from Komoot by tour ID')
+  .action(async (gpxFile: string | undefined, options: any) => {
     try {
       console.log(chalk.blue('gpx2wanderer v0.1.0'));
-      console.log(chalk.gray(`Processing: ${gpxFile}`));
       
       // Set verbose mode
       logger.setVerbose(options.verbose);
+
+      // --- Komoot route download (if --komoot is set) -------------------------
+      if (options.komoot) {
+        if (gpxFile) {
+          console.error(chalk.red('Error: Cannot specify both a GPX file and --komoot option'));
+          process.exit(1);
+        }
+
+        logger.info(`Downloading Komoot route ${options.komoot}...`);
+        
+        const komootProvider = new KomootProvider();
+        await komootProvider.authenticate();
+        
+        const komootGpx = await komootProvider.downloadRoute(options.komoot);
+        const komootGpxXml = serializeGPX(komootGpx);
+        
+        // Write to temp file so the rest of the pipeline can process it
+        const tempDir = tmpdir();
+        const komootTempFile = join(tempDir, `komoot-${options.komoot}.gpx`);
+        writeFileSync(komootTempFile, komootGpxXml, 'utf-8');
+        
+        gpxFile = komootTempFile;
+        logger.success(`Komoot route downloaded to ${komootTempFile}`);
+        
+        // Auto-set source-id if not provided
+        if (!options.sourceId) {
+          options.sourceId = `komoot-${options.komoot}`;
+        }
+      }
+
+      // Validate that we have a GPX file to process
+      if (!gpxFile) {
+        console.error(chalk.red('Error: GPX file is required. Provide a file path or use --komoot <route-id>'));
+        process.exit(1);
+      }
+
+      console.log(chalk.gray(`Processing: ${gpxFile}`));
       
       // --- Wanderer Authentication (only when --upload is set) -----------------
       let wandererSession: { host: string; cookie: string } | null = null;
