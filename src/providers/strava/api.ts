@@ -7,7 +7,7 @@
  * each successful refresh.
  */
 
-import type { DetailedAthlete, TokenResponse, RouteSummary } from './types.js';
+import type { DetailedAthlete, TokenResponse, RouteSummary, Route } from './types.js';
 import { loadStravaCredentials, saveStravaCredentials, type StravaCredentials } from '../auth/credentials.js';
 import * as logger from '../../utils/logger.js';
 
@@ -301,12 +301,22 @@ export class StravaClient {
   }
 
   /**
+   * Get detailed route information including metadata.
+   *
+   * @param routeId - The route ID (use string to avoid precision loss)
+   * @returns Detailed route information
+   */
+  async getRouteDetails(routeId: string): Promise<Route> {
+    return this.get<Route>(`/routes/${routeId}`);
+  }
+
+  /**
    * Download a route as GPX XML.
    *
-   * @param routeId - The route ID to download
+   * @param routeId - The route ID to download (use string to avoid precision loss)
    * @returns GPX XML string
    */
-  async exportRouteGpx(routeId: number): Promise<string> {
+  async exportRouteGpx(routeId: string): Promise<string> {
     const url = `${STRAVA_API_BASE}/routes/${routeId}/export_gpx`;
     const headers = await this.getHeaders();
 

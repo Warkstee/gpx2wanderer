@@ -1,16 +1,12 @@
 /**
  * Wanderer category mapping — maps provider sport codes to Wanderer categories.
  * 
- * Loads the mapping from config/mapping.json at runtime, allowing users to
- * customize the mapping without modifying source code.
+ * Imports provider-specific mapping.json files at compile time,
+ * allowing users to customize the mapping without modifying source code.
  */
 
-import { readFileSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import komootMapping from '../providers/komoot/mapping.json' with { type: 'json' };
+import stravaMapping from '../providers/strava/mapping.json' with { type: 'json' };
 
 /**
  * Category mapping entry — either a simple string or an object with category/subcategory.
@@ -25,46 +21,37 @@ interface MappingConfig {
 }
 
 /**
- * Cached mapping configuration (loaded once on first access).
+ * Provider mapping configurations.
  */
-let cachedConfig: MappingConfig | null = null;
+const providerConfigs: Record<string, MappingConfig> = {
+  komoot: komootMapping as MappingConfig,
+  strava: stravaMapping as MappingConfig,
+};
 
 /**
- * Load the category mapping from config/mapping.json.
+ * Get the category mapping for a provider.
  * 
- * The config file is located at the project root in config/mapping.json.
- * This function caches the result to avoid repeated file reads.
- * 
+ * @param provider - Provider name (e.g., 'komoot', 'strava')
  * @returns The mapping configuration
- * @throws Error if the config file cannot be loaded or parsed
+ * @throws Error if the provider is not supported
  */
-function loadMappingConfig(): MappingConfig {
-  if (cachedConfig) {
-    return cachedConfig;
+function getMappingConfig(provider: string): MappingConfig {
+  const config = providerConfigs[provider];
+  if (!config) {
+    throw new Error(`Unsupported provider: ${provider}. Supported providers: ${Object.keys(providerConfigs).join(', ')}`);
   }
-
-  // Resolve path relative to this file: src/wanderer/ -> ../../config/mapping.json
-  const configPath = resolve(__dirname, '..', '..', 'config', 'mapping.json');
-
-  try {
-    const content = readFileSync(configPath, 'utf-8');
-    cachedConfig = JSON.parse(content) as MappingConfig;
-    return cachedConfig;
-  } catch (err) {
-    throw new Error(
-      `Failed to load category mapping from ${configPath}: ${err instanceof Error ? err.message : String(err)}`
-    );
-  }
+  return config;
 }
 
 /**
  * Map a provider sport code to Wanderer category and optional subcategory.
  * 
- * @param sport - Provider sport code (e.g., "mtb_easy", "racebike", "hike")
+ * @param provider - Provider name (e.g., 'komoot', 'strava')
+ * @param sport - Provider sport code (e.g., "mtb_easy", "racebike", "hike", "1", "2")
  * @returns Object with category and optional subcategory, or null if not found
  */
-export function mapSportToCategory(sport: string): { category: string; subcategory?: string } | null {
-  const config = loadMappingConfig();
+export function mapSportToCategory(provider: string, sport: string): { category: string; subcategory?: string } | null {
+  const config = getMappingConfig(provider);
   const mapping = config.categoryMapping[sport];
 
   if (!mapping) {
@@ -85,11 +72,12 @@ export function mapSportToCategory(sport: string): { category: string; subcatego
  * For backward compatibility, this returns a single string.
  * If the mapping includes a subcategory, it's formatted as "Category (Subcategory)".
  * 
+ * @param provider - Provider name (e.g., 'komoot', 'strava')
  * @param sport - Provider sport code
  * @returns Display string (e.g., "Biking (MTB)", "Hiking"), or the original sport if not found
  */
-export function mapSportToActivityType(sport: string): string {
-  const result = mapSportToCategory(sport);
+export function mapSportToActivityType(provider: string, sport: string): string {
+  const result = mapSportToCategory(provider, sport);
 
   if (!result) {
     return sport;

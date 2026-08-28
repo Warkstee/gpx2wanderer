@@ -24,6 +24,18 @@ export interface RouteProvider {
    * Download route as GPX
    */
   downloadRoute(routeId: string): Promise<GPXFile>;
+
+  /**
+   * Get route metadata (category, duration, etc.)
+   */
+  getRouteMetadata(routeId: string): Promise<RouteMetadata>;
+}
+
+export interface RouteMetadata {
+  category?: string;
+  subcategory?: string;
+  duration?: number; // seconds
+  sport?: string;
 }
 
 export interface RouteSummary {

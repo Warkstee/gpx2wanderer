@@ -5,7 +5,7 @@
  * Uses OAuth2 with refresh tokens for authentication.
  */
 
-import type { RouteProvider, RouteSummary as ProviderRouteSummary } from '../types.js';
+import type { RouteProvider, RouteSummary as ProviderRouteSummary, RouteMetadata } from '../types.js';
 import type { GPXFile } from '../../gpx/types.js';
 import { StravaClient } from './api.js';
 import { loadStravaCredentials, type StravaCredentials } from '../auth/credentials.js';
@@ -67,7 +67,7 @@ export class StravaProvider implements RouteProvider {
   /**
    * Map a Strava RouteSummary to the provider-agnostic RouteSummary interface.
    */
-  private mapRouteToSummary(route: { id: number; name: string; distance: number; elevation_gain: number; type: number; timestamp: number }): ProviderRouteSummary {
+  private mapRouteToSummary(route: { id_str: string; name: string; distance: number; elevation_gain: number; type: number; timestamp: number }): ProviderRouteSummary {
     // Map Strava route type to activity type string
     const typeMap: Record<number, string> = {
       1: 'ride',
@@ -77,7 +77,7 @@ export class StravaProvider implements RouteProvider {
     };
 
     return {
-      id: String(route.id),
+      id: route.id_str,
       name: route.name,
       distance: route.distance,
       elevationGain: route.elevation_gain,
@@ -91,7 +91,7 @@ export class StravaProvider implements RouteProvider {
    *
    * Fetches the route from Strava's GPX export endpoint and parses it.
    *
-   * @param routeId - The route ID to download
+   * @param routeId - The route ID to download (string to preserve precision)
    * @returns Parsed GPX file
    */
   async downloadRoute(routeId: string): Promise<GPXFile> {
@@ -99,17 +99,43 @@ export class StravaProvider implements RouteProvider {
       throw new Error('Not authenticated. Call authenticate() first.');
     }
 
-    const id = parseInt(routeId, 10);
-    if (isNaN(id)) {
-      throw new Error(`Invalid route ID: ${routeId}`);
-    }
-
-    logger.debug(`Downloading route ${id} from Strava...`);
-    const gpxXml = await this.client.exportRouteGpx(id);
+    logger.debug(`Downloading route ${routeId} from Strava...`);
+    const gpxXml = await this.client.exportRouteGpx(routeId);
 
     logger.debug('Parsing GPX...');
     const gpx = parseGPX(gpxXml);
 
     return gpx;
+  }
+
+  /**
+   * Get route metadata including category and duration.
+   *
+   * @param routeId - The route ID (string to preserve precision)
+   * @returns Route metadata
+   */
+  async getRouteMetadata(routeId: string): Promise<RouteMetadata> {
+    if (!this.client) {
+      throw new Error('Not authenticated. Call authenticate() first.');
+    }
+
+    logger.debug(`Fetching metadata for route ${routeId}...`);
+    const route = await this.client.getRouteDetails(routeId);
+
+    // Map Strava type to sport code for category mapping
+    const typeMap: Record<number, string> = {
+      1: '1', // Ride
+      2: '2', // Run
+      3: '3', // Hike
+      4: '4', // Walk
+      6: '6', // Gravel
+    };
+
+    const sportCode = typeMap[route.type] || String(route.type);
+
+    return {
+      sport: sportCode,
+      duration: route.estimated_moving_time,
+    };
   }
 }

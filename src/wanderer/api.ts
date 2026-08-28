@@ -345,6 +345,7 @@ export async function updateTrail(
   subcategoryName?: string,
   tagIds?: string[],
   gpxContent?: string,
+  duration?: number,
 ): Promise<void> {
   const url = `${host}/api/v1/trail/form/${trailId}`;
 
@@ -378,6 +379,7 @@ export async function updateTrail(
   if (difficulty) formData.append('difficulty', difficulty);
   if (categoryId) formData.append('category', categoryId);
   if (subcategoryId) formData.append('subcategory', subcategoryId);
+  if (duration !== undefined) formData.append('duration', String(duration));
   if (tagIds && tagIds.length > 0) {
     // Send tags as a JSON array
     formData.append('tags', JSON.stringify(tagIds));

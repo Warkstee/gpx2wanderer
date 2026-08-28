@@ -7,31 +7,44 @@ import { mapSportToCategory, mapSportToActivityType } from '../../wanderer/categ
 describe('Category Mapping', () => {
   describe('mapSportToCategory', () => {
     it('should map string-format sport codes', () => {
-      expect(mapSportToCategory('hike')).toEqual({ category: 'Hiking' });
-      expect(mapSportToCategory('nordicwalking')).toEqual({ category: 'Walking' });
+      expect(mapSportToCategory('komoot', 'hike')).toEqual({ category: 'Hiking' });
+      expect(mapSportToCategory('komoot', 'nordicwalking')).toEqual({ category: 'Walking' });
     });
 
     it('should map object-format sport codes with subcategory', () => {
-      expect(mapSportToCategory('mtb_easy')).toEqual({ category: 'Biking', subcategory: 'Gravel' });
-      expect(mapSportToCategory('racebike')).toEqual({ category: 'Biking', subcategory: 'Road' });
+      expect(mapSportToCategory('komoot', 'mtb_easy')).toEqual({ category: 'Biking', subcategory: 'Gravel' });
+      expect(mapSportToCategory('komoot', 'racebike')).toEqual({ category: 'Biking', subcategory: 'Road' });
     });
 
     it('should return null for unknown sport codes', () => {
-      expect(mapSportToCategory('unknown_sport')).toBeNull();
+      expect(mapSportToCategory('komoot', 'unknown_sport')).toBeNull();
+    });
+
+    it('should map Strava numeric sport codes', () => {
+      expect(mapSportToCategory('strava', '1')).toEqual({ category: 'Biking', subcategory: 'Road' });
+      expect(mapSportToCategory('strava', '2')).toEqual({ category: 'Running', subcategory: 'Road' });
+      expect(mapSportToCategory('strava', '3')).toEqual({ category: 'Hiking' });
+      expect(mapSportToCategory('strava', '4')).toEqual({ category: 'Walking' });
+      expect(mapSportToCategory('strava', '6')).toEqual({ category: 'Biking', subcategory: 'Gravel' });
     });
   });
 
   describe('mapSportToActivityType', () => {
     it('should return category name for simple mappings', () => {
-      expect(mapSportToActivityType('hike')).toBe('Hiking');
+      expect(mapSportToActivityType('komoot', 'hike')).toBe('Hiking');
     });
 
     it('should return "Category (Subcategory)" for object mappings', () => {
-      expect(mapSportToActivityType('mtb_easy')).toBe('Biking (Gravel)');
+      expect(mapSportToActivityType('komoot', 'mtb_easy')).toBe('Biking (Gravel)');
     });
 
     it('should return original sport code for unknown mappings', () => {
-      expect(mapSportToActivityType('unknown_sport')).toBe('unknown_sport');
+      expect(mapSportToActivityType('komoot', 'unknown_sport')).toBe('unknown_sport');
+    });
+
+    it('should map Strava numeric codes to activity types', () => {
+      expect(mapSportToActivityType('strava', '1')).toBe('Biking (Road)');
+      expect(mapSportToActivityType('strava', '3')).toBe('Hiking');
     });
   });
 });

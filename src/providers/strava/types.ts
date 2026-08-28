@@ -75,7 +75,8 @@ export interface RouteMap {
  * Route summary from GET /athletes/{id}/routes.
  */
 export interface RouteSummary {
-  id: number;
+  id: number; // Imprecise for large IDs - use id_str instead
+  id_str: string; // Precise string representation of the ID
   resource_state: number;
   name: string;
   description?: string;

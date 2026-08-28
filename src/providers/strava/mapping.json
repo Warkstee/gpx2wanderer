@@ -1,0 +1,9 @@
+{
+  "categoryMapping": {
+    "1": { "category": "Biking", "subcategory": "Road" },
+    "2": { "category": "Running", "subcategory": "Road" },
+    "3": "Hiking",
+    "4": "Walking",
+    "6": { "category": "Biking", "subcategory": "Gravel" }
+  }
+}

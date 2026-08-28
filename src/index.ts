@@ -19,6 +19,7 @@ import { login as wandererLogin, validateCookie, uploadTrail, updateTrail, Dupli
 import { promptForKomootCredentials } from './providers/komoot/prompts.js';
 import { KomootProvider } from './providers/komoot/index.js';
 import { promptForStravaCredentials } from './providers/strava/prompts.js';
+import { StravaProvider } from './providers/strava/index.js';
 import { mapSportToCategory } from './wanderer/category-mapping.js';
 import * as logger from './utils/logger.js';
 import type { GPXFile, GPXTrack, GPXPoint } from './gpx/types.js';
@@ -232,6 +233,7 @@ program
   .option('--upload', 'Upload output GPX to Wanderer after processing', false)
   .option('--source-id <id>', 'Source identifier for optimistic update (e.g., komoot tour ID)')
   .option('--komoot <route-id>', 'Download route from Komoot by tour ID')
+  .option('--strava <route-id>', 'Download route from Strava by route ID')
   .action(async (gpxFile: string | undefined, options: any) => {
     try {
       console.log(chalk.blue('gpx2wanderer v0.1.0'));
@@ -266,11 +268,56 @@ program
         if (!options.sourceId) {
           options.sourceId = `komoot-${options.komoot}`;
         }
+        
+        // Set provider for category mapping
+        options.provider = 'komoot';
+        
+        // Fetch route metadata
+        logger.debug('Fetching Komoot route metadata...');
+        const komootMetadata = await komootProvider.getRouteMetadata(options.komoot);
+        options.routeMetadata = komootMetadata;
+      }
+
+      // --- Strava route download (if --strava is set) -------------------------
+      if (options.strava) {
+        if (gpxFile) {
+          console.error(chalk.red('Error: Cannot specify both a GPX file and --strava option'));
+          process.exit(1);
+        }
+
+        logger.info(`Downloading Strava route ${options.strava}...`);
+        
+        const stravaProvider = new StravaProvider();
+        await stravaProvider.authenticate();
+        
+        const stravaGpx = await stravaProvider.downloadRoute(options.strava);
+        const stravaGpxXml = serializeGPX(stravaGpx);
+        
+        // Write to temp file so the rest of the pipeline can process it
+        const tempDir = tmpdir();
+        const stravaTempFile = join(tempDir, `strava-${options.strava}.gpx`);
+        writeFileSync(stravaTempFile, stravaGpxXml, 'utf-8');
+        
+        gpxFile = stravaTempFile;
+        logger.success(`Strava route downloaded to ${stravaTempFile}`);
+        
+        // Auto-set source-id if not provided
+        if (!options.sourceId) {
+          options.sourceId = `strava-${options.strava}`;
+        }
+        
+        // Set provider for category mapping
+        options.provider = 'strava';
+        
+        // Fetch route metadata
+        logger.debug('Fetching Strava route metadata...');
+        const stravaMetadata = await stravaProvider.getRouteMetadata(options.strava);
+        options.routeMetadata = stravaMetadata;
       }
 
       // Validate that we have a GPX file to process
       if (!gpxFile) {
-        console.error(chalk.red('Error: GPX file is required. Provide a file path or use --komoot <route-id>'));
+        console.error(chalk.red('Error: GPX file is required. Provide a file path or use --komoot <route-id> or --strava <route-id>'));
         process.exit(1);
       }
 
@@ -443,8 +490,11 @@ program
         const uploadGpx = readFileSync(outputPath, 'utf-8');
 
         // Resolve category and difficulty metadata (needed for both upload and update)
-        const categoryMapping = track.type ? mapSportToCategory(track.type) : null;
+        // Use route metadata if available, otherwise fall back to track type
+        const sportCode = options.routeMetadata?.sport || track.type;
+        const categoryMapping = sportCode && options.provider ? mapSportToCategory(options.provider, sportCode) : null;
         const difficulty = mapTypeToDifficulty(track.type);
+        const duration = options.routeMetadata?.duration;
 
         let trailId: string = '';
         let trailName: string = '';
@@ -477,6 +527,7 @@ program
                 categoryMapping?.subcategory,
                 undefined, // tagIds - not needed, trail already has tag
                 uploadGpx, // Update the GPX track data
+                duration, // Duration in seconds
               );
               
               trailId = existingTrailId;
@@ -573,6 +624,7 @@ program
               categoryMapping?.subcategory,
               sourceTagId ? [sourceTagId] : undefined,
               isNewTrail ? uploadGpx : undefined, // Only send GPX for new trails
+              duration,
             );
             if (categoryMapping) {
               logger.info(`  Category: ${categoryMapping.category}${categoryMapping.subcategory ? ` (${categoryMapping.subcategory})` : ''}`);

@@ -5,7 +5,7 @@
  * Currently supports listing planned routes. GPX download will be added later.
  */
 
-import type { RouteProvider, RouteSummary } from '../types.js';
+import type { RouteProvider, RouteSummary, RouteMetadata } from '../types.js';
 import type { GPXFile, GPXTrack, GPXTrackSegment, GPXPoint } from '../../gpx/types.js';
 import type { TourSummary, TourResponse } from './types.js';
 import { KomootClient, login } from './api.js';
@@ -155,5 +155,25 @@ export class KomootProvider implements RouteProvider {
 
     logger.debug(`Created GPX file with ${points.length} points`);
     return gpxFile;
+  }
+
+  /**
+   * Get route metadata including category and duration.
+   *
+   * @param routeId - The Komoot tour ID
+   * @returns Route metadata
+   */
+  async getRouteMetadata(routeId: string): Promise<RouteMetadata> {
+    if (!this.client) {
+      throw new Error('Not authenticated. Call authenticate() first.');
+    }
+
+    logger.debug(`Fetching metadata for tour ${routeId}...`);
+    const tour = await this.client.getTour(routeId);
+
+    return {
+      sport: tour.sport,
+      duration: tour.duration,
+    };
   }
 }
