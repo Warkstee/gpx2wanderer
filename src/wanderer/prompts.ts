@@ -1,5 +1,5 @@
 import prompts from 'prompts';
-import { saveWandererCredentials, type WandererCredentials } from './credentials.js';
+import { saveWandererCredentials, type WandererCredentials } from '../providers/auth/credentials.js';
 import { login } from './api.js';
 import * as logger from '../utils/logger.js';
 

@@ -44,3 +44,41 @@ export interface ToursResponse {
   };
   page: PageMetadata;
 }
+
+/**
+ * A single coordinate point in the dense track
+ */
+export interface CoordinateItem {
+  lat: number;
+  lng: number;
+  alt: number;
+  t: number; // elapsed time in milliseconds from start
+}
+
+/**
+ * Embedded coordinates structure from the API response
+ */
+export interface EmbeddedCoordinates {
+  items: CoordinateItem[];
+}
+
+/**
+ * Response from GET /v007/tours/{id}
+ * Contains full tour data with embedded coordinates
+ */
+export interface TourResponse {
+  id: number;
+  name: string;
+  date: string;
+  duration: number;
+  sport: string;
+  distance: number;
+  elevation_up: number;
+  elevation_down: number;
+  type: string;
+  difficulty?: TourDifficulty;
+  _embedded?: {
+    coordinates?: EmbeddedCoordinates;
+  };
+  [key: string]: unknown;
+}

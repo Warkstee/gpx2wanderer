@@ -6,8 +6,8 @@
  */
 
 import type { RouteProvider, RouteSummary } from '../types.js';
-import type { GPXFile } from '../../gpx/types.js';
-import type { TourSummary } from './types.js';
+import type { GPXFile, GPXTrack, GPXTrackSegment, GPXPoint } from '../../gpx/types.js';
+import type { TourSummary, TourResponse } from './types.js';
 import { KomootClient, login } from './api.js';
 import { loadKomootCredentials, saveKomootCredentials, type KomootCredentials } from '../auth/credentials.js';
 import * as logger from '../../utils/logger.js';
@@ -102,7 +102,58 @@ export class KomootProvider implements RouteProvider {
     };
   }
 
-  async downloadRoute(_routeId: string): Promise<GPXFile> {
-    throw new Error('Komoot route download not yet implemented');
+  /**
+   * Download a route from Komoot and convert it to GPX format.
+   *
+   * @param routeId - The Komoot tour ID
+   * @returns GPX file with a single track segment containing all points
+   */
+  async downloadRoute(routeId: string): Promise<GPXFile> {
+    if (!this.client) {
+      throw new Error('Not authenticated. Call authenticate() first.');
+    }
+
+    logger.debug(`Fetching tour ${routeId} from Komoot...`);
+    const tour = await this.client.getTour(routeId);
+
+    // Extract coordinates from the embedded data
+    const coordinates = tour._embedded?.coordinates?.items;
+    if (!coordinates || coordinates.length === 0) {
+      throw new Error(`Tour ${routeId} has no coordinate data`);
+    }
+
+    logger.debug(`Found ${coordinates.length} coordinate points`);
+
+    // Convert coordinates to GPX points
+    const points: GPXPoint[] = coordinates.map(coord => ({
+      lat: coord.lat,
+      lng: coord.lng,
+      ele: coord.alt,
+      time: coord.t ? new Date(coord.t).toISOString() : undefined,
+    }));
+
+    // Create a single track segment with all points
+    const segment: GPXTrackSegment = { points };
+
+    // Create the track
+    const track: GPXTrack = {
+      name: tour.name,
+      type: tour.sport,
+      segments: [segment],
+    };
+
+    // Create the GPX file
+    const gpxFile: GPXFile = {
+      version: '1.1',
+      creator: 'Komoot',
+      metadata: {
+        name: tour.name,
+        time: tour.date,
+      },
+      tracks: [track],
+    };
+
+    logger.debug(`Created GPX file with ${points.length} points`);
+    return gpxFile;
   }
 }

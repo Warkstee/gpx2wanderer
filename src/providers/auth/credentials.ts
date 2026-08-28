@@ -68,6 +68,10 @@ export interface WandererCredentials {
   cookie?: string;
 }
 
+export interface ValhallaConfig {
+  url: string;
+}
+
 // ── Encryption primitives ─────────────────────────────────────────────
 
 /**
@@ -172,6 +176,15 @@ function writeEnvFile(env: Record<string, string>): void {
     if (env['WANDERER_COOKIE_ENC']) {
       sections.push(`WANDERER_COOKIE_ENC=${env['WANDERER_COOKIE_ENC']}`);
     }
+  }
+
+  // Valhalla section
+  if (env['VALHALLA_URL_ENC']) {
+    sections.push(
+      '',
+      '# Valhalla routing engine (encrypted, machine-bound)',
+      `VALHALLA_URL_ENC=${env['VALHALLA_URL_ENC']}`,
+    );
   }
 
   writeFileSync(ENV_PATH, sections.join('\n') + '\n', { mode: 0o600 });
@@ -353,5 +366,45 @@ export function saveWandererCookie(cookie: string): void {
   if (!env['WANDERER_USERNAME_ENC']) return;
 
   env['WANDERER_COOKIE_ENC'] = encrypt(cookie);
+  writeEnvFile(env);
+}
+
+// ── Valhalla configuration ────────────────────────────────────────────
+
+/**
+ * Check if Valhalla configuration exists.
+ */
+export function hasValhallaConfig(): boolean {
+  const env = readEnvFile();
+  return !!env['VALHALLA_URL_ENC'];
+}
+
+/**
+ * Load and decrypt Valhalla configuration from the .env file.
+ * Returns null if configuration doesn't exist or decryption fails.
+ */
+export function loadValhallaConfig(): ValhallaConfig | null {
+  const env = readEnvFile();
+  const urlEnc = env['VALHALLA_URL_ENC'];
+
+  if (!urlEnc) return null;
+
+  try {
+    return {
+      url: decrypt(urlEnc),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Encrypt and save Valhalla configuration to the .env file.
+ * Creates the config directory and file if they don't exist.
+ * Preserves credentials for other providers.
+ */
+export function saveValhallaConfig(config: ValhallaConfig): void {
+  const env = readEnvFile();
+  env['VALHALLA_URL_ENC'] = encrypt(config.url);
   writeEnvFile(env);
 }

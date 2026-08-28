@@ -13,7 +13,7 @@ import { serializeGPX } from './gpx/serializer.js';
 import { writeGpxFile, generateOutputFilename } from './output/writer.js';
 import { buildMultiSegmentTrack } from './waypoints/segment-builder.js';
 import { postSimplifyWaypoints } from './waypoints/post-simplifier.js';
-import { loadValhallaConfig, hasValhallaConfig, saveValhallaConfig, loadWandererCredentials, saveWandererCookie, type WandererCredentials } from './wanderer/credentials.js';
+import { loadValhallaConfig, hasValhallaConfig, saveValhallaConfig, loadWandererCredentials, saveWandererCookie, type WandererCredentials } from './providers/auth/credentials.js';
 import { promptForWandererCredentials } from './wanderer/prompts.js';
 import { login as wandererLogin, validateCookie, uploadTrail, updateTrail, DuplicateTrailError, findTrailBySourceTag, createTag, deleteTag, listTags, cleanupOrphanedTags } from './wanderer/api.js';
 import { promptForKomootCredentials } from './providers/komoot/prompts.js';

@@ -5,7 +5,7 @@
  * Based on the Wanderer plugin's komoot client implementation.
  */
 
-import type { ToursResponse, TourSummary } from './types.js';
+import type { ToursResponse, TourSummary, TourResponse } from './types.js';
 import * as logger from '../../utils/logger.js';
 
 const KOMOOT_API_BASE = 'https://api.komoot.de';
@@ -234,6 +234,20 @@ export class KomootClient {
     } while (page <= totalPages);
 
     return allTours;
+  }
+
+  /**
+   * Fetch full tour details including coordinates.
+   *
+   * @param tourId - The tour ID to fetch
+   * @returns Full tour response with embedded coordinates
+   */
+  async getTour(tourId: string): Promise<TourResponse> {
+    const query = new URLSearchParams({
+      '_embedded': 'coordinates',
+      'format': 'coordinate_array',
+    });
+    return this.get<TourResponse>(`/v007/tours/${encodeURIComponent(tourId)}?${query}`);
   }
 
   /**

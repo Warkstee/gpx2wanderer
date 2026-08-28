@@ -19,7 +19,7 @@ import { generateWaypoints } from '../../waypoints/generator.js';
 import { ValhallaClient } from '../../waypoints/valhalla.js';
 import { buildMultiSegmentTrack } from '../../waypoints/segment-builder.js';
 import { serializeGPX } from '../../gpx/serializer.js';
-import { loadValhallaConfig } from '../../wanderer/credentials.js';
+import { loadValhallaConfig } from '../../providers/auth/credentials.js';
 import type { GPXFile, GPXTrack, GPXPoint } from '../../gpx/types.js';
 
 // Get current directory in ESM
