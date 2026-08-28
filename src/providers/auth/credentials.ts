@@ -7,7 +7,7 @@
  *
  * Each provider uses a namespaced set of environment variables:
  *   - Komoot:  KOMOOT_EMAIL_ENC, KOMOOT_PASSWORD_ENC, KOMOOT_TOKEN_ENC, KOMOOT_USERID_ENC
- *   - Strava:  STRAVA_CLIENT_ID_ENC, STRAVA_CLIENT_SECRET_ENC, STRAVA_ACCESS_TOKEN_ENC, STRAVA_REFRESH_TOKEN_ENC
+ *   - Strava:  STRAVA_CLIENT_ID_ENC, STRAVA_CLIENT_SECRET_ENC, STRAVA_REFRESH_TOKEN_ENC
  *   - Wanderer: WANDERER_USERNAME_ENC, WANDERER_PASSWORD_ENC, WANDERER_HOST_ENC, WANDERER_COOKIE_ENC
  */
 
@@ -57,7 +57,6 @@ export interface KomootCredentials {
 export interface StravaCredentials {
   clientId: string;
   clientSecret: string;
-  accessToken: string;
   refreshToken: string;
 }
 
@@ -159,7 +158,6 @@ function writeEnvFile(env: Record<string, string>): void {
       '# Strava credentials (encrypted, machine-bound)',
       `STRAVA_CLIENT_ID_ENC=${env['STRAVA_CLIENT_ID_ENC']}`,
       `STRAVA_CLIENT_SECRET_ENC=${env['STRAVA_CLIENT_SECRET_ENC']}`,
-      `STRAVA_ACCESS_TOKEN_ENC=${env['STRAVA_ACCESS_TOKEN_ENC']}`,
       `STRAVA_REFRESH_TOKEN_ENC=${env['STRAVA_REFRESH_TOKEN_ENC']}`,
     );
   }
@@ -249,7 +247,7 @@ export function saveKomootCredentials(credentials: KomootCredentials): void {
 export function hasStravaCredentials(): boolean {
   const env = readEnvFile();
   return !!(env['STRAVA_CLIENT_ID_ENC'] && env['STRAVA_CLIENT_SECRET_ENC']
-    && env['STRAVA_ACCESS_TOKEN_ENC'] && env['STRAVA_REFRESH_TOKEN_ENC']);
+    && env['STRAVA_REFRESH_TOKEN_ENC']);
 }
 
 /**
@@ -261,16 +259,14 @@ export function loadStravaCredentials(): StravaCredentials | null {
 
   const clientIdEnc = env['STRAVA_CLIENT_ID_ENC'];
   const clientSecretEnc = env['STRAVA_CLIENT_SECRET_ENC'];
-  const accessTokenEnc = env['STRAVA_ACCESS_TOKEN_ENC'];
   const refreshTokenEnc = env['STRAVA_REFRESH_TOKEN_ENC'];
 
-  if (!clientIdEnc || !clientSecretEnc || !accessTokenEnc || !refreshTokenEnc) return null;
+  if (!clientIdEnc || !clientSecretEnc || !refreshTokenEnc) return null;
 
   try {
     return {
       clientId: decrypt(clientIdEnc),
       clientSecret: decrypt(clientSecretEnc),
-      accessToken: decrypt(accessTokenEnc),
       refreshToken: decrypt(refreshTokenEnc),
     };
   } catch {
@@ -287,7 +283,6 @@ export function saveStravaCredentials(credentials: StravaCredentials): void {
   const env = readEnvFile();
   env['STRAVA_CLIENT_ID_ENC'] = encrypt(credentials.clientId);
   env['STRAVA_CLIENT_SECRET_ENC'] = encrypt(credentials.clientSecret);
-  env['STRAVA_ACCESS_TOKEN_ENC'] = encrypt(credentials.accessToken);
   env['STRAVA_REFRESH_TOKEN_ENC'] = encrypt(credentials.refreshToken);
   writeEnvFile(env);
 }

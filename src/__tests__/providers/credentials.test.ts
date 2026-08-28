@@ -120,7 +120,6 @@ KOMOOT_USERID_ENC=invalid-base64-data
       const credentials: StravaCredentials = {
         clientId: 'client-id-123',
         clientSecret: 'client-secret-xyz',
-        accessToken: 'access-token-abc',
         refreshToken: 'refresh-token-def',
       };
 
@@ -135,7 +134,6 @@ KOMOOT_USERID_ENC=invalid-base64-data
       const credentials: StravaCredentials = {
         clientId: 'client-id-123',
         clientSecret: 'client-secret-xyz',
-        accessToken: 'access-token-abc',
         refreshToken: 'refresh-token-def',
       };
 
@@ -145,7 +143,7 @@ KOMOOT_USERID_ENC=invalid-base64-data
       expect(content).not.toContain('client-id-123');
       expect(content).not.toContain('client-secret-xyz');
       expect(content).toContain('STRAVA_CLIENT_ID_ENC=');
-      expect(content).toContain('STRAVA_ACCESS_TOKEN_ENC=');
+      expect(content).toContain('STRAVA_REFRESH_TOKEN_ENC=');
     });
   });
 
@@ -215,7 +213,6 @@ KOMOOT_USERID_ENC=invalid-base64-data
       const stravaCreds: StravaCredentials = {
         clientId: 'strava-id',
         clientSecret: 'strava-secret',
-        accessToken: 'strava-access',
         refreshToken: 'strava-refresh',
       };
 
