@@ -50,6 +50,16 @@ export class KomootProvider implements RouteProvider {
         throw new Error('No Komoot credentials found. Please authenticate with email/password first.');
       }
       logger.debug('Loaded stored Komoot credentials');
+      
+      // If token is empty, re-authenticate with stored credentials
+      if (!komootCreds.token) {
+        logger.debug('Token is empty, re-authenticating...');
+        const loginResult = await login(komootCreds.email, komootCreds.password);
+        komootCreds.token = loginResult.token;
+        komootCreds.userID = loginResult.userID;
+        saveKomootCredentials(komootCreds);
+        logger.debug('Komoot credentials refreshed');
+      }
     }
 
     // Create client with token

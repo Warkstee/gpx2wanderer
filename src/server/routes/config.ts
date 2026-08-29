@@ -155,33 +155,29 @@ export function createConfigRoutes(): Hono<Env> {
       configured: true,
       clientId: creds.clientId,
       clientSecret: mask(creds.clientSecret),
+      refreshToken: creds.refreshToken ? mask(creds.refreshToken) : '',
     });
   });
 
   /**
    * POST /api/config/strava
    * 
-   * Saves Strava credentials (clientId, clientSecret).
-   * Note: refreshToken is obtained during OAuth flow, not configured here.
+   * Saves Strava credentials (clientId, clientSecret, refreshToken).
+   * The refreshToken is required for Strava API access.
    */
   config.post('/strava', async (c) => {
     try {
       const body = await c.req.json();
-      const { clientId, clientSecret } = body;
+      const { clientId, clientSecret, refreshToken } = body;
 
-      if (!clientId || !clientSecret) {
+      if (!clientId || !clientSecret || !refreshToken) {
         return c.json({ 
           error: 'Bad Request', 
-          message: 'clientId and clientSecret are required' 
+          message: 'clientId, clientSecret, and refreshToken are required' 
         }, 400);
       }
 
-      // Save with empty refreshToken (will be populated during OAuth)
-      saveStravaCredentials({ 
-        clientId, 
-        clientSecret, 
-        refreshToken: '' 
-      });
+      saveStravaCredentials({ clientId, clientSecret, refreshToken });
       
       return c.json({ message: 'Strava credentials saved successfully' });
     } catch (err) {

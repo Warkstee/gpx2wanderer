@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   gpx2wanderer:
     build: .
@@ -8,9 +6,8 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=6721
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - ADMIN_USER=${ADMIN_USER}
       - ADMIN_PASS=${ADMIN_PASS}
-      - VALHALLA_URL=${VALHALLA_URL:-http://valhalla:8002}
-      - WANDERER_URL=${WANDERER_URL:-http://wanderer:3000}
+    volumes:
+      - ./config:/root/.gpx2wanderer
     restart: unless-stopped
