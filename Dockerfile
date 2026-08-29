@@ -30,7 +30,7 @@ RUN npm ci --production
 COPY --from=builder /app/dist ./dist
 
 # Expose port
-EXPOSE 4000
+EXPOSE 6721
 
-# Start application
-CMD ["node", "dist/index.js"]
+# Start API server
+CMD ["node", "dist/server/index.js"]

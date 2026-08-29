@@ -4,10 +4,13 @@ services:
   gpx2wanderer:
     build: .
     ports:
-      - "4000:4000"
+      - "6721:6721"
     environment:
       - NODE_ENV=production
+      - PORT=6721
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - ADMIN_USER=${ADMIN_USER}
+      - ADMIN_PASS=${ADMIN_PASS}
       - VALHALLA_URL=${VALHALLA_URL:-http://valhalla:8002}
       - WANDERER_URL=${WANDERER_URL:-http://wanderer:3000}
     restart: unless-stopped
