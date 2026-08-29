@@ -12,6 +12,7 @@ import { secureHeaders } from 'hono/secure-headers';
 import { getCookie } from 'hono/cookie';
 import * as loggerUtil from '../utils/logger.js';
 import { createAuthRoutes } from './routes/auth.js';
+import { createConfigRoutes } from './routes/config.js';
 
 /**
  * Session store for authenticated users.
@@ -94,6 +95,10 @@ export function createApp(): Hono<Env> {
   // Register auth routes (login is unauthenticated, logout and me require auth via middleware above)
   const authRoutes = createAuthRoutes();
   app.route('/api/auth', authRoutes);
+
+  // Register config routes (all require authentication)
+  const configRoutes = createConfigRoutes();
+  app.route('/api/config', configRoutes);
 
   // Global error handler
   app.onError((err, c) => {
