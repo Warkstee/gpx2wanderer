@@ -11,6 +11,7 @@ import { prettyJSON } from 'hono/pretty-json';
 import { secureHeaders } from 'hono/secure-headers';
 import { getCookie } from 'hono/cookie';
 import * as loggerUtil from '../utils/logger.js';
+import { createAuthRoutes } from './routes/auth.js';
 
 /**
  * Session store for authenticated users.
@@ -62,8 +63,14 @@ export function createApp(): Hono<Env> {
     });
   });
 
-  // Auth middleware for all other /api/* routes
+  // Auth middleware for all /api/* routes except /api/auth/login
   app.use('/api/*', async (c, next) => {
+    // Skip auth for login endpoint
+    if (c.req.path === '/api/auth/login') {
+      await next();
+      return;
+    }
+
     const authHeader = c.req.header('Authorization');
     const sessionToken = authHeader?.replace('Bearer ', '') ||
                          getCookie(c, 'session');
@@ -83,6 +90,10 @@ export function createApp(): Hono<Env> {
     c.set('session', session);
     await next();
   });
+
+  // Register auth routes (login is unauthenticated, logout and me require auth via middleware above)
+  const authRoutes = createAuthRoutes();
+  app.route('/api/auth', authRoutes);
 
   // Global error handler
   app.onError((err, c) => {
