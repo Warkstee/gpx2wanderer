@@ -1,0 +1,137 @@
+<!DOCTYPE html><html lang="en" class="h-full" style=""><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Wanderer Route Sync</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Geist', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              emerald: '#10b981',
+              emeraldHover: '#059669',
+              lightEmerald: '#34d399',
+            },
+            surface: {
+              bg: '#051424',
+              card: '#0d1c2d',
+              cardBorder: '#1e3247',
+              input: '#071626',
+              inputBorder: '#223850',
+              inputFocus: '#10b981',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #051424;
+      color: #e2e8f0;
+      font-family: 'Geist', sans-serif;
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col justify-between items-center min-h-screen antialiased bg-[#051424] text-slate-100 p-4">
+
+  <!-- Subtle Top Branding -->
+  <header class="w-full max-w-5xl flex items-center justify-between py-6 px-4">
+    <div class="flex items-center gap-2.5">
+      <img src="https://lh3.googleusercontent.com/aida/AEtjO1UEMhlO6BSFvv-VeH054cJlf63usOhnwGBw19I78G1fE3PIuwHlCDRgw7DoInWJQ-Cm9zBhUeLOfEnza-f8J1hlDPWQuY_h4D6vOhZbRL-IUa1H63eCrrVoRN90mPICEMbTOUV5HfoeLiKrpD21qMmICBrlvYPHFi02GX8QkNOSN67ryctNJ92FwzA8c1S1DRQOJBUH_A5curEQZlMbf35V2_DwOWUcWYcmnv3-6pbEym0RI0IsIKLP8ko" alt="Wanderer Logo" class="w-8 h-8 object-contain">
+      <span class="text-sm font-semibold tracking-wide text-slate-300">Wanderer <span class="text-emerald-400 font-normal">// Route Sync</span></span>
+    </div>
+    <div class="flex items-center gap-2 text-xs text-slate-400 font-mono">
+      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+      <span class="">System Ready</span>
+    </div>
+  </header>
+
+  <!-- Centralized Simple Login Modal / Card -->
+  <main class="w-full flex items-center justify-center my-auto">
+    <div class="w-full max-w-[420px] bg-[#0d1c2d] border border-[#1e3247] rounded-xl shadow-2xl p-8 relative overflow-hidden backdrop-blur-sm">
+      
+      <!-- Top Accent Line -->
+      <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-emerald-500 to-transparent opacity-80"></div>
+
+      <!-- Modal Header with Main Brand Logo -->
+      <div class="flex flex-col items-center text-center mb-7">
+        <img src="https://lh3.googleusercontent.com/aida/AEtjO1UEMhlO6BSFvv-VeH054cJlf63usOhnwGBw19I78G1fE3PIuwHlCDRgw7DoInWJQ-Cm9zBhUeLOfEnza-f8J1hlDPWQuY_h4D6vOhZbRL-IUa1H63eCrrVoRN90mPICEMbTOUV5HfoeLiKrpD21qMmICBrlvYPHFi02GX8QkNOSN67ryctNJ92FwzA8c1S1DRQOJBUH_A5curEQZlMbf35V2_DwOWUcWYcmnv3-6pbEym0RI0IsIKLP8ko" alt="Wanderer Logo" class="w-14 h-14 object-contain mb-4">
+        <h1 class="text-2xl font-bold tracking-tight text-white">Sign In</h1>
+        <p class="text-sm text-slate-400 mt-1.5">Enter your credentials to access the sync dashboard</p>
+      </div>
+
+      <!-- Simple Login Form -->
+      <form onsubmit="event.preventDefault();" class="space-y-4">
+        <!-- Username Field -->
+        <div>
+          <label for="username" class="block text-xs font-medium uppercase tracking-wider text-slate-300 mb-1.5">Username</label>
+          <div class="relative">
+            <input type="text" id="username" name="username" placeholder="admin" required="" class="w-full px-3.5 py-2.5 bg-[#071626] border border-[#223850] rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors">
+            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-500">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Password Field -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label for="password" class="block text-xs font-medium uppercase tracking-wider text-slate-300">Password</label>
+            <a href="#" class="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">Forgot?</a>
+          </div>
+          <div class="relative">
+            <input type="password" id="password" name="password" placeholder="••••••••••••" required="" class="w-full px-3.5 py-2.5 bg-[#071626] border border-[#223850] rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors">
+            <button type="button" onclick="const p = document.getElementById('password'); p.type = p.type === 'password' ? 'text' : 'password';" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 focus:outline-none" aria-label="Toggle password visibility">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Remember Me Checkbox -->
+        <div class="flex items-center justify-between pt-1">
+          <label class="flex items-center gap-2 cursor-pointer select-none">
+            <input type="checkbox" class="w-4 h-4 rounded bg-[#071626] border-[#223850] text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0 focus:ring-offset-[#0d1c2d] cursor-pointer">
+            <span class="text-xs text-slate-300">Remember me</span>
+          </label>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="w-full mt-2 py-2.5 px-4 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-[#051424] font-semibold text-sm rounded-lg shadow-lg shadow-emerald-500/10 transition-all duration-150 flex items-center justify-center gap-2">
+          <span class="">Sign In</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+          </svg>
+        </button>
+      </form>
+    </div>
+  </main>
+
+  <!-- Minimal Footer -->
+  <footer class="w-full max-w-5xl py-4 px-4 flex items-center justify-between text-xs text-slate-500 border-t border-slate-800/40">
+    <div class="flex items-center gap-4">
+      <span class="">Wanderer Route Sync • v0.1</span>
+    </div>
+    <div class="flex items-center gap-4">
+      <a href="#" class="hover:text-slate-400 transition-colors">Documentation</a>
+      <a href="#" class="hover:text-slate-400 transition-colors">Privacy</a>
+    </div>
+  </footer>
+
+
+
+
+</body></html>

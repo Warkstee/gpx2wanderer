@@ -1,0 +1,535 @@
+<!DOCTYPE html><html class="dark" lang="en"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "tertiary-container": "#e29100",
+                "secondary-container": "#00a6e0",
+                "background": "#051424",
+                "on-secondary-container": "#00374d",
+                "outline-variant": "#25384d",
+                "surface": "#051424",
+                "surface-bright": "#2c3a4c",
+                "on-tertiary-fixed-variant": "#653e00",
+                "inverse-surface": "#d4e4fa",
+                "surface-variant": "#1e2e40",
+                "on-primary-fixed-variant": "#005236",
+                "secondary-fixed": "#c4e7ff",
+                "tertiary-fixed": "#ffddb8",
+                "surface-tint": "#4edea3",
+                "primary": "#10b981",
+                "outline": "#334b63",
+                "secondary-fixed-dim": "#7bd0ff",
+                "on-surface": "#f1f5f9",
+                "surface-container-high": "#182635",
+                "on-primary-fixed": "#002113",
+                "on-tertiary": "#472a00",
+                "on-primary": "#003824",
+                "error-container": "#451217",
+                "on-background": "#f1f5f9",
+                "inverse-on-surface": "#233143",
+                "on-secondary": "#00354a",
+                "on-surface-variant": "#94a3b8",
+                "primary-fixed-dim": "#4edea3",
+                "surface-container-highest": "#203246",
+                "inverse-primary": "#006c49",
+                "on-secondary-fixed": "#001e2c",
+                "on-tertiary-container": "#ffdca8",
+                "on-primary-container": "#00422b",
+                "on-error-container": "#ffdad6",
+                "tertiary-fixed-dim": "#ffb95f",
+                "tertiary": "#ffb95f",
+                "on-error": "#ffffff",
+                "surface-container-lowest": "#030c17",
+                "error": "#f43f5e",
+                "on-tertiary-fixed": "#2a1700",
+                "secondary": "#38bdf8",
+                "primary-container": "#10b981",
+                "primary-fixed": "#6ffbbe",
+                "surface-container": "#141f2c",
+                "surface-dim": "#051424",
+                "surface-container-low": "#0b1622",
+                "on-secondary-fixed-variant": "#004c69"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.375rem",
+                "xl": "0.5rem",
+                "full": "9999px"
+        },
+        "spacing": {
+                "gutter-compact": "0.75rem",
+                "space-lg": "1rem",
+                "space-sm": "0.5rem",
+                "space-2xl": "2rem",
+                "space-xs": "0.25rem",
+                "space-md": "0.75rem",
+                "space-2xs": "0.125rem",
+                "space-3xl": "3rem",
+                "gutter-default": "1rem",
+                "margin-page": "1.5rem",
+                "space-xl": "1.5rem",
+                "gutter-desktop": "1.5rem",
+                "gutter-mobile": "1rem",
+                "container-max": "72rem"
+        },
+        "fontFamily": {
+                "code-sm": ["JetBrains Mono", "monospace"],
+                "body-lg": ["Geist", "sans-serif"],
+                "code-md": ["JetBrains Mono", "monospace"],
+                "body-md": ["Geist", "sans-serif"],
+                "headline-lg-mobile": ["Geist", "sans-serif"],
+                "body-sm": ["Geist", "sans-serif"],
+                "label-md": ["JetBrains Mono", "monospace"],
+                "headline-xl": ["Geist", "sans-serif"],
+                "headline-lg": ["Geist", "sans-serif"],
+                "headline-md": ["Geist", "sans-serif"],
+                "headline-sm": ["Geist", "sans-serif"],
+                "label-sm": ["JetBrains Mono", "monospace"],
+                "label-code": ["JetBrains Mono", "monospace"],
+                "label-caps": ["JetBrains Mono", "monospace"],
+                "title-md": ["Geist", "sans-serif"],
+                "title-lg": ["Geist", "sans-serif"]
+        },
+        "fontSize": {
+                "code-sm": ["0.6875rem", { "lineHeight": "1rem", "letterSpacing": "0em", "fontWeight": "400" }],
+                "body-lg": ["1rem", { "lineHeight": "1.625rem", "letterSpacing": "-0.005em", "fontWeight": "400" }],
+                "code-md": ["0.8125rem", { "lineHeight": "1.25rem", "letterSpacing": "-0.01em", "fontWeight": "400" }],
+                "body-md": ["0.875rem", { "lineHeight": "1.375rem", "letterSpacing": "0em", "fontWeight": "400" }],
+                "headline-lg-mobile": ["1.375rem", { "lineHeight": "1.75rem", "letterSpacing": "-0.015em", "fontWeight": "600" }],
+                "body-sm": ["0.75rem", { "lineHeight": "1.125rem", "letterSpacing": "0.01em", "fontWeight": "400" }],
+                "label-md": ["0.75rem", { "lineHeight": "1rem", "letterSpacing": "0.04em", "fontWeight": "500" }],
+                "label-code": ["0.75rem", { "lineHeight": "1rem", "letterSpacing": "0.02em", "fontWeight": "500" }],
+                "label-caps": ["0.6875rem", { "lineHeight": "0.875rem", "letterSpacing": "0.06em", "fontWeight": "600" }],
+                "headline-xl": ["2.25rem", { "lineHeight": "2.75rem", "letterSpacing": "-0.025em", "fontWeight": "600" }],
+                "headline-lg": ["1.75rem", { "lineHeight": "2.25rem", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                "headline-md": ["1.25rem", { "lineHeight": "1.75rem", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+                "headline-sm": ["1rem", { "lineHeight": "1.5rem", "letterSpacing": "0em", "fontWeight": "600" }],
+                "title-md": ["0.9375rem", { "lineHeight": "1.375rem", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                "title-lg": ["1.125rem", { "lineHeight": "1.5rem", "letterSpacing": "-0.015em", "fontWeight": "600" }]
+        }
+      }
+    }
+  }
+</script></head><body class="bg-surface font-body-md text-body-md text-on-surface antialiased min-h-screen flex flex-col selection:bg-primary/20 selection:text-primary"><header class="fixed top-0 left-0 right-0 w-full z-50 bg-[#051424]/90 backdrop-blur-xl border-b border-[#25384d]/60"><div class="h-16 max-w-container-max mx-auto px-gutter-mobile lg:px-gutter-desktop flex items-center justify-between gap-space-md"><div class="flex items-center gap-space-xl"><a class="flex items-center gap-space-sm group" data-path="routes" href="#"><img alt="Wanderer Compass Logo" class="w-8 h-8 object-contain transition-transform group-hover:scale-105" src="https://lh3.googleusercontent.com/aida/AEtjO1UEMhlO6BSFvv-VeH054cJlf63usOhnwGBw19I78G1fE3PIuwHlCDRgw7DoInWJQ-Cm9zBhUeLOfEnza-f8J1hlDPWQuY_h4D6vOhZbRL-IUa1H63eCrrVoRN90mPICEMbTOUV5HfoeLiKrpD21qMmICBrlvYPHFi02GX8QkNOSN67ryctNJ92FwzA8c1S1DRQOJBUH_A5curEQZlMbf35V2_DwOWUcWYcmnv3-6pbEym0RI0IsIKLP8ko"><span class="font-headline-sm text-headline-sm text-white tracking-tight font-medium">Wanderer&nbsp;<span style="color: rgb(52, 211, 153); font-size: 14px; letter-spacing: 0.35px; background-color: rgb(5, 20, 36);" class="">// Route Sync</span></span></a><nav class="hidden md:flex items-center gap-1.5"><a aria-current="page" class="px-space-md py-1.5 transition-colors bg-emerald-500/15 text-primary border border-emerald-500/30 font-title-md text-[13px] rounded" data-path="routes" href="#">Routes</a><a class="px-space-md py-1.5 text-on-surface-variant hover:bg-surface-container-high hover:text-white transition-colors font-body-md text-[13px] rounded" data-path="credentials" href="#">Credentials</a><a class="px-space-md py-1.5 text-on-surface-variant hover:bg-surface-container-high hover:text-white transition-colors font-body-md text-[13px] rounded" data-path="logs" href="#">Logs</a></nav></div><div class="flex items-center gap-space-md"><div class="flex items-center gap-space-sm"><div class="w-8 h-8 rounded-full bg-surface-container-high border border-[#25384d] flex items-center justify-center text-on-surface-variant hover:text-white hover:border-slate-500 transition-colors cursor-pointer" title="User profile"><span class="material-symbols-outlined text-[18px]">person</span></div><a aria-label="Sign Out" class="text-on-surface-variant hover:text-error transition-colors flex items-center justify-center p-space-2xs" data-path="login" href="#" title="Sign Out"><span class="material-symbols-outlined text-[20px]">logout</span></a></div></div></div></header><main class="w-full flex-1 pt-16 bg-surface"><div class="max-w-container-max mx-auto px-gutter-mobile lg:px-gutter-desktop py-space-xl"><div class="flex flex-col w-full gap-space-xl">
+<!-- Page Header & Key Telemetry Counters -->
+<section class="flex flex-col gap-space-lg">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-space-md">
+<div class="space-y-space-2xs max-w-2xl">
+<h1 class="font-headline-lg text-headline-lg text-white tracking-tight">Routes</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">
+          Manage and synchronize planned routes between Strava, Komoot, and your self-hosted Wanderer instance.
+        </p>
+</div>
+</div>
+<!-- Metrics Strip / Cards -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-md items-stretch"><div class="lg:col-span-7 bg-surface-container border border-[#25384d] px-space-md py-space-sm rounded shadow-sm flex flex-col space-y-space-xs"><div class="flex items-center justify-between pb-space-2xs border-b border-[#25384d]/60"><span class="font-title-md text-title-md text-white font-semibold">Connected Providers</span><span class="font-label-code text-label-code text-primary bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">2 active</span></div><div class="flex flex-col space-y-space-xs flex-1 justify-start"><div class="flex items-center justify-between py-space-xs border-b border-[#25384d]/40"><div class="flex items-center gap-space-xs"><span class="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]"></span><span class="font-body-md text-body-md font-medium text-slate-200 whitespace-nowrap">Strava</span></div><div class="flex items-center gap-space-md"><span class="font-headline-sm text-headline-sm text-white font-semibold">18</span><span class="inline-flex items-center gap-space-2xs font-label-code text-label-code px-space-xs py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 whitespace-nowrap"><span class="material-symbols-outlined text-[13px]">check</span>18 / 18 synced</span></div></div><div class="flex items-center justify-between py-space-xs"><div class="flex items-center gap-space-xs"><span class="w-2 h-2 rounded-full bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.5)]"></span><span class="font-body-md text-body-md font-medium text-slate-200 whitespace-nowrap">Komoot</span></div><div class="flex items-center gap-space-md"><span class="font-headline-sm text-headline-sm text-white font-semibold">16</span><span class="inline-flex items-center gap-space-2xs font-label-code text-label-code px-space-xs py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30 whitespace-nowrap"><span class="material-symbols-outlined text-[13px]">check</span>16 / 16 synced</span></div></div></div></div><div class="lg:col-span-5 bg-surface-container border border-[#25384d] px-space-md py-space-sm rounded shadow-sm flex flex-col justify-between"><div class="flex items-center justify-between pb-space-2xs border-b border-[#25384d]/60"><div class="flex items-center gap-2"><span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span><span class="font-title-md text-title-md text-white font-semibold">Latest Activity</span></div></div><div class="space-y-space-xs py-space-xs"><div class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-[16px] text-emerald-400">check_circle</span><p class="font-body-sm text-body-sm text-slate-300 truncate flex-1">Payload push to Wanderer ok</p><span class="font-label-code text-label-code text-slate-500 whitespace-nowrap">14:22:10</span></div><div class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-[16px] text-sky-400">sync_alt</span><p class="font-body-sm text-body-sm text-slate-300 truncate flex-1">Komoot webhook: Tour #99281 updated</p><span class="font-label-code text-label-code text-slate-500 whitespace-nowrap">14:21:48</span></div><div class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-[16px] text-amber-400">dns</span><p class="font-body-sm text-body-sm text-slate-300 truncate flex-1">Strava OAuth token refreshed (5h 58m)</p><span class="font-label-code text-label-code text-slate-500 whitespace-nowrap">13:58:02</span></div></div><div class="pt-space-2xs border-t border-[#25384d]/40"><a class="inline-flex items-center gap-space-xs font-label-code text-label-code text-emerald-400 hover:text-emerald-300 transition-colors" data-path="logs" href="#"><span class="">Inspect daemon logs</span><span class="material-symbols-outlined text-[14px]">arrow_forward</span></a></div></div></div>
+</section>
+<!-- Filter & Search Toolbar Section -->
+<section class="bg-surface-container border border-[#25384d] p-space-md rounded shadow-sm space-y-space-md">
+<div class="flex flex-col lg:flex-row gap-space-sm items-stretch lg:items-center justify-between">
+<!-- Search Field -->
+<div class="relative flex-1">
+<span class="material-symbols-outlined absolute left-space-sm top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+<input class="w-full pl-9 pr-space-md py-space-xs bg-surface-container-low text-white font-body-md text-body-md rounded border border-[#25384d] focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder:text-slate-500 transition-all" id="routeSearch" placeholder="Search route by name, region, or distance tag..." type="search">
+</div>
+<!-- Segmented Selectors & Dropdowns -->
+<div class="flex flex-wrap items-center gap-space-xs">
+<!-- Provider Selector -->
+<div class="flex items-center bg-surface-container-low border border-[#25384d] p-0.5 rounded">
+<button class="provider-filter active-filter px-space-sm py-1 text-on-primary bg-primary rounded font-label-caps text-label-caps uppercase transition-colors" data-provider="all" type="button">All</button>
+<button class="provider-filter px-space-sm py-1 text-on-surface-variant hover:text-white rounded font-label-caps text-label-caps uppercase transition-colors" data-provider="strava" type="button">Strava</button>
+<button class="provider-filter px-space-sm py-1 text-on-surface-variant hover:text-white rounded font-label-caps text-label-caps uppercase transition-colors" data-provider="komoot" type="button">Komoot</button>
+</div>
+<!-- Status Filter -->
+<select class="bg-surface-container-low text-slate-200 border border-[#25384d] font-body-sm text-body-sm px-space-sm py-space-xs rounded focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-pointer" id="statusFilter">
+<option class="bg-[#0b1622] text-slate-200" value="all">All Statuses</option>
+<option class="bg-[#0b1622] text-slate-200" value="synced">Synced (Valid)</option>
+<option class="bg-[#0b1622] text-slate-200" value="pending">Pending Sync</option>
+<option class="bg-[#0b1622] text-slate-200" value="conflict">Conflict / Retrying</option>
+</select>
+<!-- Sort Select -->
+<select class="bg-surface-container-low text-slate-200 border border-[#25384d] font-body-sm text-body-sm px-space-sm py-space-xs rounded focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-pointer" id="sortSelect">
+<option class="bg-[#0b1622] text-slate-200" value="date">Sort: Date Modified</option>
+<option class="bg-[#0b1622] text-slate-200" value="distance">Sort: Distance (km)</option>
+<option class="bg-[#0b1622] text-slate-200" value="elevation">Sort: Elevation Gain</option>
+<option class="bg-[#0b1622] text-slate-200" value="name">Sort: Name (A-Z)</option>
+</select>
+</div>
+</div>
+<!-- Active Tag Summary Strip -->
+<div class="flex items-center justify-between text-on-surface-variant font-label-code text-label-code pt-1 border-t border-[#25384d]/40">
+<div class="flex items-center gap-space-xs flex-wrap">
+<span class="text-slate-400">Active Filters:</span>
+<span class="inline-flex items-center gap-space-2xs px-space-xs py-0.5 rounded bg-surface-container-high border border-[#25384d] text-slate-300 font-label-caps text-label-caps">
+          Provider: All
+        </span>
+<span class="inline-flex items-center gap-space-2xs px-space-xs py-0.5 rounded bg-surface-container-high border border-[#25384d] text-slate-300 font-label-caps text-label-caps">
+          Status: Active
+        </span>
+<button class="text-emerald-400 hover:text-emerald-300 hover:underline ml-space-xs cursor-pointer" type="button">Clear all</button>
+</div>
+<div class="font-label-code text-label-code text-slate-400">
+        Showing <span class="text-white font-semibold">8</span> of <span class="text-white font-semibold">42</span> records
+      </div>
+</div>
+</section>
+<!-- Semantic Routes Table Section -->
+<section class="bg-surface-container border border-[#25384d] rounded shadow-sm overflow-hidden">
+<div class="overflow-x-auto w-full">
+<table class="w-full text-left font-body-md text-body-md border-collapse">
+<thead class="bg-[#0b1622] text-on-surface-variant font-label-caps text-label-caps uppercase border-b border-[#25384d]">
+<tr>
+<th class="py-space-sm px-space-md w-10" scope="col">
+<input aria-label="Select all routes" class="rounded cursor-pointer bg-surface-container-low border-[#25384d] text-primary focus:ring-emerald-500 focus:ring-offset-0" type="checkbox">
+</th>
+<th class="py-space-sm px-space-md" scope="col">Route Details &amp; Metrics</th>
+<th class="py-space-sm px-space-md" scope="col">Source</th>
+<th class="py-space-sm px-space-md" scope="col">Sync Status</th>
+<th class="py-space-sm px-space-md text-right" scope="col">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-[#25384d]/50 text-on-surface" id="routesTableBody">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-high/60 transition-colors">
+<td class="py-space-sm px-space-md">
+<input aria-label="Select Alpine Ridge Gravel Loop" class="rounded cursor-pointer bg-surface-container-low border-[#25384d] text-primary focus:ring-emerald-500 focus:ring-offset-0" type="checkbox">
+</td>
+<td class="py-space-sm px-space-md">
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-white">Alpine Ridge Gravel Loop</span>
+<div class="flex items-center gap-space-xs mt-0.5">
+<span class="font-label-code text-label-code text-emerald-400 font-semibold">74.2 km</span>
+<span class="text-slate-600">•</span>
+<span class="font-label-code text-label-code text-slate-400">1,280 m ↗</span>
+<span class="text-slate-600">•</span>
+<span class="font-label-caps text-label-caps px-space-2xs py-0.5 rounded bg-surface-container-highest/60 text-slate-300 border border-[#25384d]/50">Gravel</span>
+</div>
+</div>
+</td>
+<td class="py-space-sm px-space-md whitespace-nowrap">
+<span class="inline-flex items-center gap-space-2xs px-space-xs py-0.5 rounded font-label-caps text-label-caps bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                Strava
+              </span>
+</td>
+<td class="py-space-sm px-space-md whitespace-nowrap">
+<span class="inline-flex items-center gap-space-2xs font-label-caps text-label-caps px-space-xs py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+<span class="material-symbols-outlined text-[13px]">check_circle</span>
+                Synced
+              </span>
+</td>
+<td class="py-space-sm px-space-md whitespace-nowrap text-right">
+<div class="inline-flex items-center gap-space-2xs">
+<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container-highest text-slate-400 hover:text-emerald-400 transition-colors cursor-pointer" title="Sync now" type="button"><span class="material-symbols-outlined text-[18px]">sync</span></button>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="bg-surface-container-low/40 hover:bg-surface-container-high/60 transition-colors">
+<td class="py-space-sm px-space-md">
+<input aria-label="Select Black Forest Ultra 60k" class="rounded cursor-pointer bg-surface-container-low border-[#25384d] text-primary focus:ring-emerald-500 focus:ring-offset-0" type="checkbox">
+</td>
+<td class="py-space-sm px-space-md">
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-white">Black Forest Ultra 60k</span>
+<div class="flex items-center gap-space-xs mt-0.5">
+<span class="font-label-code text-label-code text-emerald-400 font-semibold">61.8 km</span>
+<span class="text-slate-600">•</span>
+<span class="font-label-code text-label-code text-slate-400">2,140 m ↗</span>
+<span class="text-slate-600">•</span>
+<span class="font-label-caps text-label-caps px-space-2xs py-0.5 rounded bg-surface-container-highest/60 text-slate-300 border border-[#25384d]/50">Trail Run</span>
+</div>
+</div>
+</td>
+<td class="py-space-sm px-space-md whitespace-nowrap">
+<span class="inline-flex items-center gap-space-2xs px-space-xs py-0.5 rounded font-label-caps text-label-caps bg-sky-500/10 text-sky-300 border border-sky-500/20 font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-sky-400"></span>
+                Komoot
+              </span>
+</td>
+<td class="py-space-sm px-space-md whitespace-nowrap">
+<span class="inline-flex items-center gap-space-2xs font-label-caps text-label-caps px-space-xs py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+<span class="material-symbols-outlined text-[13px]">check_circle</span>
+                Synced
+              </span>
+</td>
+<td class="py-space-sm px-space-md whitespace-nowrap text-right">
+<div class="inline-flex items-center gap-space-2xs">
+<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container-highest text-slate-400 hover:text-emerald-400 transition-colors cursor-pointer" title="Sync now" type="button"><span class="material-symbols-outlined text-[18px]">sync</span></button>
+</div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-high/60 transition-colors">
+<td class="py-space-sm px-space-md">
+<input aria-label="Select Dolomiti High Pass" class="rounded cursor-pointer bg-surface-container-low border-[#25384d] text-primary focus:ring-emerald-500 focus:ring-offset-0" type="checkbox">
+</td>
+<td class="py-space-sm px-space-md">
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-white">Dolomiti High Pass Traverse</span>
+<div class="flex items-center gap-space-xs mt-0.5">
+<span class="font-label-code text-label-code text-emerald-400 font-semibold">118.4 km</span>
+<span class="text-slate-600">•</span>
+<span class="font-label-code text-label-code text-slate-400">3,650 m ↗</span>
+<span class="text-slate-600">•</span>
+<span class="font-label-caps text-label-caps px-space-2xs py-0.5 rounded bg-surface-container-highest/60 text-slate-300 border border-[#25384d]/50">Road Bike</span>
+</div>
+</div>
+</td>
+<td class="py-space-sm px-space-md whitespace-nowrap">
+<span class="inline-flex items-center gap-space-2xs px-space-xs py-0.5 rounded font-label-caps text-label-caps bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                Strava
+              </span>
+</td>
+<td class="py-space-sm px-space-md whitespace-nowrap">
+<span class="inline-flex items-center gap-space-2xs font-label-caps text-label-caps px-space-xs py-0.5 rounded bg-slate-500/20 text-slate-300 border border-slate-500/30">
+<span class="material-symbols-outlined text-[13px] text-slate-400">cloud_off</span>Not Synced</span>
+</td>
+<td class="py-space-sm px-space-md whitespace-nowrap text-right">
+<div class="inline-flex items-center gap-space-2xs">
+<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container-highest text-slate-400 hover:text-emerald-400 transition-colors cursor-pointer" title="Sync now" type="button"><span class="material-symbols-outlined text-[18px]">sync</span></button>
+</div>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="bg-surface-container-low/40 hover:bg-surface-container-high/60 transition-colors">
+<td class="py-space-sm px-space-md">
+<input aria-label="Select Coastal Path Cruise" class="rounded cursor-pointer bg-surface-container-low border-[#25384d] text-primary focus:ring-emerald-500 focus:ring-offset-0" type="checkbox">
+</td>
+<td class="py-space-sm px-space-md">
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-white">Coastal Path Cruise</span>
+<div class="flex items-center gap-space-xs mt-0.5">
+<span class="font-label-code text-label-code text-emerald-400 font-semibold">32.0 km</span>
+<span class="text-slate-600">•</span>
+<span class="font-label-code text-label-code text-slate-400">140 m ↗</span>
+<span class="text-slate-600">•</span>
+<span class="font-label-caps text-label-caps px-space-2xs py-0.5 rounded bg-surface-container-highest/60 text-slate-300 border border-[#25384d]/50">Touring</span>
+</div>
+</div>
+</td>
+<td class="py-space-sm px-space-md whitespace-nowrap">
+<span class="inline-flex items-center gap-space-2xs px-space-xs py-0.5 rounded font-label-caps text-label-caps bg-sky-500/10 text-sky-300 border border-sky-500/20 font-semibold"><span class="w-1.5 h-1.5 rounded-full bg-sky-400"></span>Komoot</span>
+</td>
+<td class="py-space-sm px-space-md whitespace-nowrap">
+<span class="inline-flex items-center gap-space-2xs font-label-caps text-label-caps px-space-xs py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+<span class="material-symbols-outlined text-[13px]">check_circle</span>
+                Synced
+              </span>
+</td>
+<td class="py-space-sm px-space-md whitespace-nowrap text-right">
+<div class="inline-flex items-center gap-space-2xs">
+<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container-highest text-slate-400 hover:text-emerald-400 transition-colors cursor-pointer" title="Sync now" type="button"><span class="material-symbols-outlined text-[18px]">sync</span></button>
+</div>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-surface-container-high/60 transition-colors">
+<td class="py-space-sm px-space-md">
+<input aria-label="Select River Trail Commute" class="rounded cursor-pointer bg-surface-container-low border-[#25384d] text-primary focus:ring-emerald-500 focus:ring-offset-0" type="checkbox">
+</td>
+<td class="py-space-sm px-space-md">
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-white">River Trail Commute &amp; Bypass</span>
+<div class="flex items-center gap-space-xs mt-0.5">
+<span class="font-label-code text-label-code text-emerald-400 font-semibold">18.5 km</span>
+<span class="text-slate-600">•</span>
+<span class="font-label-code text-label-code text-slate-400">85 m ↗</span>
+<span class="text-slate-600">•</span>
+<span class="font-label-caps text-label-caps px-space-2xs py-0.5 rounded bg-surface-container-highest/60 text-slate-300 border border-[#25384d]/50">Commute</span>
+</div>
+</div>
+</td>
+<td class="py-space-sm px-space-md whitespace-nowrap">
+<span class="inline-flex items-center gap-space-2xs px-space-xs py-0.5 rounded font-label-caps text-label-caps bg-sky-500/10 text-sky-300 border border-sky-500/20 font-semibold"><span class="w-1.5 h-1.5 rounded-full bg-sky-400"></span>Komoot</span>
+</td>
+<td class="py-space-sm px-space-md whitespace-nowrap">
+<span class="inline-flex items-center gap-space-2xs font-label-caps text-label-caps px-space-xs py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+<span class="material-symbols-outlined text-[13px]">check_circle</span>
+                Synced
+              </span>
+</td>
+<td class="py-space-sm px-space-md whitespace-nowrap text-right">
+<div class="inline-flex items-center gap-space-2xs">
+<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container-highest text-slate-400 hover:text-emerald-400 transition-colors cursor-pointer" title="Sync now" type="button"><span class="material-symbols-outlined text-[18px]">sync</span></button>
+</div>
+</td>
+</tr>
+<!-- Row 6 (Conflict / Needs Resolution) -->
+<tr class="bg-rose-950/20 hover:bg-rose-950/30 transition-colors border-l-2 border-l-rose-500">
+<td class="py-space-sm px-space-md">
+<input aria-label="Select Karwendel High Ridge" class="rounded cursor-pointer bg-surface-container-low border-[#25384d] text-primary focus:ring-emerald-500 focus:ring-offset-0" type="checkbox">
+</td>
+<td class="py-space-sm px-space-md">
+<div class="flex flex-col">
+<div class="flex items-center gap-space-xs">
+<span class="font-title-md text-title-md text-white">Karwendel High Ridge 3-Day Pack</span>
+<span class="material-symbols-outlined text-rose-400 text-[16px]" title="Segment waypoint mismatch detected">warning</span>
+</div>
+<div class="flex items-center gap-space-xs mt-0.5">
+<span class="font-label-code text-label-code text-emerald-400 font-semibold">88.7 km</span>
+<span class="text-slate-600">•</span>
+<span class="font-label-code text-label-code text-slate-400">4,120 m ↗</span>
+<span class="text-slate-600">•</span>
+<span class="font-label-caps text-label-caps px-space-2xs py-0.5 rounded bg-surface-container-highest/60 text-slate-300 border border-[#25384d]/50">Multi-day</span>
+</div>
+</div>
+</td>
+<td class="py-space-sm px-space-md whitespace-nowrap">
+<span class="inline-flex items-center gap-space-2xs px-space-xs py-0.5 rounded font-label-caps text-label-caps bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                Strava
+              </span>
+</td>
+<td class="py-space-sm px-space-md whitespace-nowrap">
+<span class="inline-flex items-center gap-space-2xs font-label-caps text-label-caps px-space-xs py-0.5 rounded bg-rose-500/15 text-rose-300 border border-rose-500/30">
+<span class="material-symbols-outlined text-[13px]">error</span>
+                Conflict
+              </span>
+</td>
+<td class="py-space-sm px-space-md whitespace-nowrap text-right">
+<div class="inline-flex items-center gap-space-2xs"><button class="px-space-xs py-1 bg-rose-500 text-white hover:bg-rose-600 rounded font-label-code text-label-code transition-colors cursor-pointer shadow-sm" title="Resolve Conflict" type="button">Resolve</button></div>
+</td>
+</tr>
+<!-- Row 7 -->
+<tr class="hover:bg-surface-container-high/60 transition-colors">
+<td class="py-space-sm px-space-md">
+<input aria-label="Select Velo Bavarian Lake Tour" class="rounded cursor-pointer bg-surface-container-low border-[#25384d] text-primary focus:ring-emerald-500 focus:ring-offset-0" type="checkbox">
+</td>
+<td class="py-space-sm px-space-md">
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-white">Velo Bavarian Lake Tour</span>
+<div class="flex items-center gap-space-xs mt-0.5">
+<span class="font-label-code text-label-code text-emerald-400 font-semibold">52.4 km</span>
+<span class="text-slate-600">•</span>
+<span class="font-label-code text-label-code text-slate-400">320 m ↗</span>
+<span class="text-slate-600">•</span>
+<span class="font-label-caps text-label-caps px-space-2xs py-0.5 rounded bg-surface-container-highest/60 text-slate-300 border border-[#25384d]/50">Touring</span>
+</div>
+</div>
+</td>
+<td class="py-space-sm px-space-md whitespace-nowrap">
+<span class="inline-flex items-center gap-space-2xs px-space-xs py-0.5 rounded font-label-caps text-label-caps bg-sky-500/10 text-sky-300 border border-sky-500/20 font-semibold"><span class="w-1.5 h-1.5 rounded-full bg-sky-400"></span>Komoot</span>
+</td>
+<td class="py-space-sm px-space-md whitespace-nowrap">
+<span class="inline-flex items-center gap-space-2xs font-label-caps text-label-caps px-space-xs py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+<span class="material-symbols-outlined text-[13px]">check_circle</span>
+                Synced
+              </span>
+</td>
+<td class="py-space-sm px-space-md whitespace-nowrap text-right">
+<div class="inline-flex items-center gap-space-2xs">
+<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container-highest text-slate-400 hover:text-emerald-400 transition-colors cursor-pointer" title="Sync now" type="button"><span class="material-symbols-outlined text-[18px]">sync</span></button>
+</div>
+</td>
+</tr>
+<!-- Row 8 -->
+<tr class="bg-surface-container-low/40 hover:bg-surface-container-high/60 transition-colors">
+<td class="py-space-sm px-space-md">
+<input aria-label="Select Gotthard Pass Ascent" class="rounded cursor-pointer bg-surface-container-low border-[#25384d] text-primary focus:ring-emerald-500 focus:ring-offset-0" type="checkbox">
+</td>
+<td class="py-space-sm px-space-md">
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-white">Gotthard Pass Ascent • Tremola</span>
+<div class="flex items-center gap-space-xs mt-0.5">
+<span class="font-label-code text-label-code text-emerald-400 font-semibold">44.1 km</span>
+<span class="text-slate-600">•</span>
+<span class="font-label-code text-label-code text-slate-400">1,820 m ↗</span>
+<span class="text-slate-600">•</span>
+<span class="font-label-caps text-label-caps px-space-2xs py-0.5 rounded bg-surface-container-highest/60 text-slate-300 border border-[#25384d]/50">Historic Cobbles</span>
+</div>
+</div>
+</td>
+<td class="py-space-sm px-space-md whitespace-nowrap">
+<span class="inline-flex items-center gap-space-2xs px-space-xs py-0.5 rounded font-label-caps text-label-caps bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                Strava
+              </span>
+</td>
+<td class="py-space-sm px-space-md whitespace-nowrap">
+<span class="inline-flex items-center gap-space-2xs font-label-caps text-label-caps px-space-xs py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+<span class="material-symbols-outlined text-[13px]">check_circle</span>
+                Synced
+              </span>
+</td>
+<td class="py-space-sm px-space-md whitespace-nowrap text-right">
+<div class="inline-flex items-center gap-space-2xs">
+<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container-highest text-slate-400 hover:text-emerald-400 transition-colors cursor-pointer" title="Sync now" type="button"><span class="material-symbols-outlined text-[18px]">sync</span></button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination & Bottom Record Toolbar -->
+<div class="px-space-md py-space-sm bg-[#0b1622] border-t border-[#25384d] flex flex-col sm:flex-row items-center justify-between gap-space-sm font-body-sm text-body-sm text-on-surface-variant">
+<div class="flex items-center gap-space-xs font-label-code text-label-code text-slate-400">
+<span class="">Displaying records <strong class="text-slate-200">1–8</strong> of <strong class="text-slate-200">42</strong></span>
+<span class="text-slate-600">•</span>
+<span class="">Page 1 of 6</span>
+</div>
+<!-- Semantic Pico Pagination Controls -->
+<nav aria-label="Route pagination" class="flex items-center gap-space-2xs">
+<button class="px-space-sm py-1 rounded bg-surface-container border border-[#25384d]/60 text-slate-600 font-label-code text-label-code cursor-not-allowed" disabled="" type="button">
+          ← Previous
+        </button>
+<button class="w-7 h-7 flex items-center justify-center rounded bg-emerald-500 text-slate-950 font-label-code text-label-code font-bold shadow-sm" type="button">
+          1
+        </button>
+<button class="w-7 h-7 flex items-center justify-center rounded hover:bg-surface-container-high text-slate-300 font-label-code text-label-code transition-colors cursor-pointer" type="button">
+          2
+        </button>
+<button class="w-7 h-7 flex items-center justify-center rounded hover:bg-surface-container-high text-slate-300 font-label-code text-label-code transition-colors cursor-pointer" type="button">
+          3
+        </button>
+<span class="px-space-2xs text-slate-600">…</span>
+<button class="w-7 h-7 flex items-center justify-center rounded hover:bg-surface-container-high text-slate-300 font-label-code text-label-code transition-colors cursor-pointer" type="button">
+          6
+        </button>
+<button class="px-space-sm py-1 rounded bg-surface-container border border-[#25384d] hover:bg-surface-container-high text-slate-200 font-label-code text-label-code transition-colors cursor-pointer" type="button">
+          Next →
+        </button>
+</nav>
+</div>
+</section>
+</div>
+<script>
+  // Simple client-side micro-interactions for the Pico dashboard
+  document.addEventListener('DOMContentLoaded', () => {
+    // Provider filter toggle buttons
+    const filterButtons = document.querySelectorAll('.provider-filter');
+    filterButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        filterButtons.forEach(b => {
+          b.classList.remove('bg-primary', 'text-on-primary');
+          b.classList.add('text-on-surface-variant');
+        });
+        btn.classList.add('bg-primary', 'text-on-primary');
+        btn.classList.remove('text-on-surface-variant');
+      });
+    });
+
+    // Instant search filtering on route table rows
+    const searchInput = document.getElementById('routeSearch');
+    const tableBody = document.getElementById('routesTableBody');
+    if (searchInput && tableBody) {
+      searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        const rows = tableBody.querySelectorAll('tr');
+        rows.forEach(row => {
+          const text = row.innerText.toLowerCase();
+          row.style.display = text.includes(query) ? '' : 'none';
+        });
+      });
+    }
+  });
+</script></div></main><footer class="w-full bg-[#030c17] py-space-lg border-t border-[#25384d]/60"><div class="max-w-container-max mx-auto px-gutter-mobile lg:px-gutter-desktop flex flex-col sm:flex-row items-center justify-between gap-space-sm"><div class="flex items-center gap-space-xs font-label-caps text-label-caps uppercase text-slate-500"><span class="tracking-wider">WANDERER ROUTE SYNC</span><span class="text-slate-700">•</span><span class="text-slate-400">v0.1</span></div></div></footer>
+
+
+
+</body></html>
