@@ -3,6 +3,7 @@
  */
 
 import chalk from 'chalk';
+import { addEntry } from './log-buffer.js';
 
 let verboseMode = false;
 
@@ -17,6 +18,7 @@ export function setVerbose(enabled: boolean): void {
  * Log info message (always shown)
  */
 export function info(message: string): void {
+  addEntry({ timestamp: new Date().toISOString(), level: 'info', message });
   console.log(chalk.blue('ℹ'), message);
 }
 
@@ -24,6 +26,7 @@ export function info(message: string): void {
  * Log success message (always shown)
  */
 export function success(message: string): void {
+  addEntry({ timestamp: new Date().toISOString(), level: 'success', message });
   console.log(chalk.green('✓'), message);
 }
 
@@ -31,6 +34,7 @@ export function success(message: string): void {
  * Log warning message (always shown)
  */
 export function warn(message: string): void {
+  addEntry({ timestamp: new Date().toISOString(), level: 'warn', message });
   console.log(chalk.yellow('⚠'), message);
 }
 
@@ -38,6 +42,7 @@ export function warn(message: string): void {
  * Log error message (always shown)
  */
 export function error(message: string): void {
+  addEntry({ timestamp: new Date().toISOString(), level: 'error', message });
   console.error(chalk.red('✖'), message);
 }
 
@@ -45,6 +50,7 @@ export function error(message: string): void {
  * Log debug message (only shown in verbose mode)
  */
 export function debug(message: string): void {
+  addEntry({ timestamp: new Date().toISOString(), level: 'debug', message });
   if (verboseMode) {
     console.log(chalk.gray('🔍'), chalk.gray(message));
   }

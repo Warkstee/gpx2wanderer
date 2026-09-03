@@ -15,6 +15,7 @@ import { createAuthRoutes } from './routes/auth.js';
 import { createConfigRoutes } from './routes/config.js';
 import { createKomootRoutes, createStravaRoutes } from './routes/providers.js';
 import { createMaintenanceRoutes } from './routes/maintenance.js';
+import { createLogsRoutes } from './routes/logs.js';
 
 /**
  * Session store for authenticated users.
@@ -112,6 +113,10 @@ export function createApp(): Hono<Env> {
   // Register maintenance routes (all require authentication)
   const maintenanceRoutes = createMaintenanceRoutes();
   app.route('/api', maintenanceRoutes);
+
+  // Register logs routes (all require authentication)
+  const logsRoutes = createLogsRoutes();
+  app.route('/api/logs', logsRoutes);
 
   // Global error handler
   app.onError((err, c) => {
