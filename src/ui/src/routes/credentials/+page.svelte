@@ -2,6 +2,195 @@
   import Card from '$lib/components/Card.svelte';
   import Input from '$lib/components/Input.svelte';
   import Button from '$lib/components/Button.svelte';
+  import { post } from '$lib/api';
+  import type { PageData } from './$types';
+
+  export let data: PageData;
+
+  // Wanderer Core credentials
+  let wandererHost = data.wanderer.host || '';
+  let wandererUsername = data.wanderer.username || '';
+  let wandererPassword = '';
+  let wandererSaving = false;
+  let wandererMessage = '';
+  let wandererMessageType: 'success' | 'error' = 'success';
+  let wandererConfigured = data.wanderer.configured || false;
+
+  // Komoot credentials
+  let komootEmail = data.komoot.email || '';
+  let komootPassword = '';
+  let komootSaving = false;
+  let komootMessage = '';
+  let komootMessageType: 'success' | 'error' = 'success';
+  let komootConfigured = data.komoot.configured || false;
+
+  // Strava credentials
+  let stravaClientId = data.strava.clientId || '';
+  let stravaClientSecret = '';
+  let stravaRefreshToken = '';
+  let stravaSaving = false;
+  let stravaMessage = '';
+  let stravaMessageType: 'success' | 'error' = 'success';
+  let stravaConfigured = data.strava.configured || false;
+
+  // Valhalla configuration
+  let valhallaUrl = data.valhalla.url || '';
+  let valhallaSaving = false;
+  let valhallaMessage = '';
+  let valhallaMessageType: 'success' | 'error' = 'success';
+  let valhallaConfigured = data.valhalla.configured || false;
+
+  function isValidUrl(urlString: string): boolean {
+    try {
+      new URL(urlString);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function saveWanderer() {
+    if (!wandererHost || !wandererUsername || !wandererPassword) {
+      wandererMessage = 'All fields are required';
+      wandererMessageType = 'error';
+      return;
+    }
+
+    if (!isValidUrl(wandererHost)) {
+      wandererMessage = 'Please enter a valid URL (e.g., http://wanderer.local:3000)';
+      wandererMessageType = 'error';
+      return;
+    }
+
+    wandererSaving = true;
+    wandererMessage = '';
+
+    const result = await post('/api/config/wanderer', {
+      host: wandererHost,
+      username: wandererUsername,
+      password: wandererPassword
+    });
+
+    wandererSaving = false;
+
+    if (result.error) {
+      wandererMessage = result.error.message || 'Failed to save credentials';
+      wandererMessageType = 'error';
+    } else {
+      wandererMessage = 'Credentials saved successfully';
+      wandererMessageType = 'success';
+      wandererPassword = '';
+      wandererConfigured = true;
+    }
+  }
+
+  async function saveKomoot() {
+    if (!komootEmail || !komootPassword) {
+      komootMessage = 'Email and password are required';
+      komootMessageType = 'error';
+      return;
+    }
+
+    komootSaving = true;
+    komootMessage = '';
+
+    const result = await post('/api/config/komoot', {
+      email: komootEmail,
+      password: komootPassword
+    });
+
+    komootSaving = false;
+
+    if (result.error) {
+      komootMessage = result.error.message || 'Failed to save credentials';
+      komootMessageType = 'error';
+    } else {
+      komootMessage = 'Credentials saved successfully';
+      komootMessageType = 'success';
+      komootPassword = '';
+      komootConfigured = true;
+    }
+  }
+
+  async function saveStrava() {
+    if (!stravaClientId || !stravaClientSecret || !stravaRefreshToken) {
+      stravaMessage = 'All fields are required';
+      stravaMessageType = 'error';
+      return;
+    }
+
+    stravaSaving = true;
+    stravaMessage = '';
+
+    const result = await post('/api/config/strava', {
+      clientId: stravaClientId,
+      clientSecret: stravaClientSecret,
+      refreshToken: stravaRefreshToken
+    });
+
+    stravaSaving = false;
+
+    if (result.error) {
+      stravaMessage = result.error.message || 'Failed to save credentials';
+      stravaMessageType = 'error';
+    } else {
+      stravaMessage = 'Credentials saved successfully';
+      stravaMessageType = 'success';
+      stravaClientSecret = '';
+      stravaRefreshToken = '';
+      stravaConfigured = true;
+    }
+  }
+
+  async function saveValhalla() {
+    if (!valhallaUrl) {
+      valhallaMessage = 'URL is required';
+      valhallaMessageType = 'error';
+      return;
+    }
+
+    if (!isValidUrl(valhallaUrl)) {
+      valhallaMessage = 'Please enter a valid URL (e.g., http://valhalla.local:8002)';
+      valhallaMessageType = 'error';
+      return;
+    }
+
+    valhallaSaving = true;
+    valhallaMessage = '';
+
+    const result = await post('/api/config/valhalla', {
+      url: valhallaUrl
+    });
+
+    valhallaSaving = false;
+
+    if (result.error) {
+      valhallaMessage = result.error.message || 'Failed to save configuration';
+      valhallaMessageType = 'error';
+    } else {
+      valhallaMessage = 'Configuration saved successfully';
+      valhallaMessageType = 'success';
+      valhallaConfigured = true;
+    }
+  }
+
+  function getStatusForService(configured: boolean, type: string): { status: 'success' | 'warning' | 'error' | 'info' | 'neutral', label: string } {
+    if (!configured) {
+      return { status: 'warning', label: 'Not Configured' };
+    }
+    
+    if (type === 'wanderer') {
+      return { status: 'success', label: 'Local Node' };
+    } else if (type === 'komoot') {
+      return { status: 'info', label: 'Authorized' };
+    } else if (type === 'strava') {
+      return { status: 'success', label: 'OAuth Active' };
+    } else if (type === 'valhalla') {
+      return { status: 'success', label: 'Connected' };
+    }
+    
+    return { status: 'neutral', label: 'Unknown' };
+  }
 </script>
 
 <div class="mx-auto w-full px-8 flex-1 flex flex-col justify-start py-6 max-w-3xl">
@@ -23,14 +212,46 @@
   </div>
 
   <div class="flex flex-col w-full pb-8 space-y-8">
-    <Card title="Wanderer Core" status="success" statusLabel="Local Node">
+    <!-- Wanderer Core Configuration-->
+    <Card 
+      title="Wanderer Core" 
+      status={getStatusForService(wandererConfigured, 'wanderer').status}
+      statusLabel={getStatusForService(wandererConfigured, 'wanderer').label}
+    >
       <div class="space-y-4">
-        <Input label="Valhalla Endpoint / Host URL" value="http://valhalla.local:8002" icon="🌐" />
-        <Input label="Username" value="admin@wanderer.local" icon="👤" />
-        <Input label="Password" type="password" value="••••••••••••" icon="🔒" showToggle />
+        <Input 
+          label="Wanderer Host URL" 
+          bind:value={wandererHost} 
+          placeholder="http://wanderer.local:3000"
+          icon="🌐" 
+        />
+        <Input 
+          label="Username" 
+          bind:value={wandererUsername} 
+          placeholder="admin"
+          icon="👤" 
+        />
+        <Input 
+          label="Password" 
+          type="password" 
+          bind:value={wandererPassword} 
+          placeholder={wandererConfigured ? '••••••••' : 'Enter password'}
+          icon="🔒" 
+          showToggle 
+        />
+        {#if wandererMessage}
+          <div class="text-sm {wandererMessageType === 'success' ? 'text-emerald-400' : 'text-red-400'}">
+            {wandererMessage}
+          </div>
+        {/if}
       </div>
       <div slot="actions">
-        <Button variant="primary" size="sm">
+        <Button 
+          variant="primary" 
+          size="sm"
+          loading={wandererSaving}
+          on:click={saveWanderer}
+        >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
           </svg>
@@ -39,13 +260,41 @@
       </div>
     </Card>
 
-    <Card title="Komoot" status="info" statusLabel="Authorized">
+    <!-- Komoot Configuration -->
+    <Card 
+      title="Komoot" 
+      status={getStatusForService(komootConfigured, 'komoot').status}
+      statusLabel={getStatusForService(komootConfigured, 'komoot').label}
+    >
       <div class="space-y-4">
-        <Input label="Komoot Account / Email" type="email" value="rider.alex@wanderer.cc" icon="✉" />
-        <Input label="Account Password" type="password" value="••••••••••••" icon="🔒" showToggle />
+        <Input 
+          label="Komoot Account / Email" 
+          type="text" 
+          bind:value={komootEmail} 
+          placeholder="rider@example.com"
+          icon="✉" 
+        />
+        <Input 
+          label="Account Password" 
+          type="password" 
+          bind:value={komootPassword} 
+          placeholder={komootConfigured ? '••••••••' : 'Enter password'}
+          icon="🔒" 
+          showToggle 
+        />
+        {#if komootMessage}
+          <div class="text-sm {komootMessageType === 'success' ? 'text-emerald-400' : 'text-red-400'}">
+            {komootMessage}
+          </div>
+        {/if}
       </div>
       <div slot="actions">
-        <Button variant="primary" size="sm">
+        <Button 
+          variant="primary" 
+          size="sm"
+          loading={komootSaving}
+          on:click={saveKomoot}
+        >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
           </svg>
@@ -54,12 +303,82 @@
       </div>
     </Card>
 
-    <Card title="Strava" status="success" statusLabel="OAuth Active">
-      <div class="text-center py-8 text-on-surface-variant">
-        <p class="text-sm">Strava configuration will be implemented in GPWA-37</p>
+    <!-- Strava Configuration -->
+    <Card 
+      title="Strava" 
+      status={getStatusForService(stravaConfigured, 'strava').status}
+      statusLabel={getStatusForService(stravaConfigured, 'strava').label}
+    >
+      <div class="space-y-4">
+        <Input 
+          label="Client ID" 
+          bind:value={stravaClientId} 
+          placeholder="12345"
+          icon="🔑" 
+        />
+        <Input 
+          label="Client Secret" 
+          type="password" 
+          bind:value={stravaClientSecret} 
+          placeholder={stravaConfigured ? '••••••••' : 'Enter client secret'}
+          icon="" 
+          showToggle 
+        />
+        <Input 
+          label="Refresh Token" 
+          type="password" 
+          bind:value={stravaRefreshToken} 
+          placeholder={stravaConfigured ? '••••••••' : 'Enter refresh token'}
+          icon="🔄" 
+          showToggle 
+        />
+        {#if stravaMessage}
+          <div class="text-sm {stravaMessageType === 'success' ? 'text-emerald-400' : 'text-red-400'}">
+            {stravaMessage}
+          </div>
+        {/if}
       </div>
       <div slot="actions">
-        <Button variant="primary" size="sm">
+        <Button 
+          variant="primary" 
+          size="sm"
+          loading={stravaSaving}
+          on:click={saveStrava}
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+          </svg>
+          Save
+        </Button>
+      </div>
+    </Card>
+
+    <!-- Valhalla Configuration -->
+    <Card 
+      title="Valhalla Routing Engine" 
+      status={getStatusForService(valhallaConfigured, 'valhalla').status}
+      statusLabel={getStatusForService(valhallaConfigured, 'valhalla').label}
+    >
+      <div class="space-y-4">
+        <Input 
+          label="Valhalla Endpoint URL" 
+          bind:value={valhallaUrl} 
+          placeholder="http://valhalla.local:8002"
+          icon="🌐" 
+        />
+        {#if valhallaMessage}
+          <div class="text-sm {valhallaMessageType === 'success' ? 'text-emerald-400' : 'text-red-400'}">
+            {valhallaMessage}
+          </div>
+        {/if}
+      </div>
+      <div slot="actions">
+        <Button 
+          variant="primary" 
+          size="sm"
+          loading={valhallaSaving}
+          on:click={saveValhalla}
+        >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
           </svg>

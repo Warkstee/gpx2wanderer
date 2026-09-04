@@ -32,6 +32,7 @@
   class="{baseClasses} {variantClasses} {sizeClasses}"
   class:opacity-50={disabled || loading}
   class:cursor-not-allowed={disabled}
+  on:click
 >
   {#if loading}
     <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">

@@ -33,6 +33,7 @@
         class:pl-4={!icon}
         class:pr-11={showToggle}
         class:pr-4={!showToggle}
+        style="font-variant-ligatures: none;"
       />
     {:else}
       <input
@@ -44,6 +45,7 @@
         class:pl-4={!icon}
         class:pr-11={showToggle}
         class:pr-4={!showToggle}
+        style="font-variant-ligatures: none;"
       />
     {/if}
     {#if showToggle}
