@@ -61,9 +61,10 @@ export function addEntry(entry: LogEntry): void {
  * 
  * @param limit - Maximum number of entries to return (default: 100, max: 500)
  * @param level - Optional filter by log level
+ * @param offset - Number of entries to skip (default: 0)
  * @returns Array of log entries
  */
-export function getEntries(limit: number = 100, level?: string): LogEntry[] {
+export function getEntries(limit: number = 100, level?: string, offset: number = 0): LogEntry[] {
   // Clamp limit to valid range
   const effectiveLimit = Math.max(1, Math.min(limit, MAX_ENTRIES));
   
@@ -88,8 +89,60 @@ export function getEntries(limit: number = 100, level?: string): LogEntry[] {
     entries = entries.filter(e => e.level === level);
   }
   
-  // Apply limit
-  return entries.slice(0, effectiveLimit);
+  // Apply offset and limit
+  return entries.slice(offset, offset + effectiveLimit);
+}
+
+/**
+ * Get total number of entries in the buffer (after optional level filter)
+ * 
+ * @param level - Optional filter by log level
+ * @returns Total count of entries
+ */
+export function getTotalCount(level?: string): number {
+  if (totalWritten <= MAX_ENTRIES) {
+    // Buffer hasn't wrapped yet
+    if (level) {
+      return buffer.filter(e => e.level === level).length;
+    }
+    return buffer.length;
+  }
+  
+  // Buffer has wrapped, count all entries
+  if (level) {
+    let count = 0;
+    for (let i = 0; i < MAX_ENTRIES; i++) {
+      if (buffer[i].level === level) count++;
+    }
+    return count;
+  }
+  
+  return MAX_ENTRIES;
+}
+
+/**
+ * Get counts per log level
+ * 
+ * @returns Object with counts for each level
+ */
+export function getLevelCounts(): Record<string, number> {
+  const counts: Record<string, number> = {
+    info: 0,
+    success: 0,
+    warn: 0,
+    error: 0,
+    debug: 0
+  };
+  
+  const entriesToCount = totalWritten <= MAX_ENTRIES ? buffer : buffer;
+  
+  for (const entry of entriesToCount) {
+    if (counts[entry.level] !== undefined) {
+      counts[entry.level]++;
+    }
+  }
+  
+  return counts;
 }
 
 /**
