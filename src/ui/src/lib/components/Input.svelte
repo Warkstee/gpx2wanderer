@@ -1,17 +1,15 @@
 <script lang="ts">
-  export let type: string = 'text';
+  export let type: 'text' | 'password' = 'text';
   export let label: string = '';
   export let value: string = '';
   export let placeholder: string = '';
   export let icon: string = '';
   export let showToggle: boolean = false;
   
-  let inputType = type;
   let visible = type !== 'password';
   
   function toggleVisibility() {
     visible = !visible;
-    inputType = visible ? 'text' : 'password';
   }
 </script>
 
@@ -25,16 +23,29 @@
     {#if icon}
       <span class="absolute left-3.5 text-outline text-[18px]">{icon}</span>
     {/if}
-    <input
-      {type}
-      {value}
-      {placeholder}
-      class="w-full h-11 bg-surface border border-outline-variant text-white rounded-lg font-mono text-sm focus:outline-none focus:border-primary transition-colors"
-      class:pl-11={icon}
-      class:pl-4={!icon}
-      class:pr-11={showToggle}
-      class:pr-4={!showToggle}
-    />
+    {#if type === 'password' && !visible}
+      <input
+        type="password"
+        bind:value
+        {placeholder}
+        class="w-full h-11 bg-surface border border-outline-variant text-white rounded-lg font-mono text-sm focus:outline-none focus:border-primary transition-colors"
+        class:pl-11={icon}
+        class:pl-4={!icon}
+        class:pr-11={showToggle}
+        class:pr-4={!showToggle}
+      />
+    {:else}
+      <input
+        type="text"
+        bind:value
+        {placeholder}
+        class="w-full h-11 bg-surface border border-outline-variant text-white rounded-lg font-mono text-sm focus:outline-none focus:border-primary transition-colors"
+        class:pl-11={icon}
+        class:pl-4={!icon}
+        class:pr-11={showToggle}
+        class:pr-4={!showToggle}
+      />
+    {/if}
     {#if showToggle}
       <button 
         type="button"

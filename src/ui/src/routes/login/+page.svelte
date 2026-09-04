@@ -1,7 +1,34 @@
 <script lang="ts">
-  import Card from '$lib/components/Card.svelte';
+  import { goto } from '$app/navigation';
+  import { post } from '$lib/api';
   import Input from '$lib/components/Input.svelte';
   import Button from '$lib/components/Button.svelte';
+
+  let username = '';
+  let password = '';
+  let error = '';
+  let loading = false;
+
+  async function handleSubmit() {
+    if (!username || !password) {
+      error = 'Please enter both username and password';
+      return;
+    }
+
+    loading = true;
+    error = '';
+
+    const result = await post('/api/auth/login', { username, password });
+
+    if (result.error) {
+      error = result.error.message || 'Login failed';
+      loading = false;
+      return;
+    }
+
+    // Success - redirect to dashboard
+    goto('/dashboard');
+  }
 </script>
 
 <div class="h-full flex flex-col justify-between items-center min-h-screen antialiased bg-background text-on-surface p-4">
@@ -44,11 +71,40 @@
         <p class="text-sm text-on-surface-variant mt-1.5">Enter your credentials to access the sync dashboard</p>
       </div>
 
-      <!-- Login Form Placeholder -->
-      <div class="text-center py-8 text-on-surface-variant">
-        <p class="text-sm mb-4">Login implementation will be completed in GPWA-36</p>
-        <p class="text-xs">This placeholder shows the layout structure</p>
-      </div>
+      <!-- Login Form -->
+      <form on:submit|preventDefault={handleSubmit} class="space-y-5">
+        {#if error}
+          <div class="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-sm text-red-400">
+            {error}
+          </div>
+        {/if}
+
+        <Input
+          label="Username"
+          type="text"
+          bind:value={username}
+          placeholder="admin"
+          icon="👤"
+        />
+
+        <Input
+          label="Password"
+          type="password"
+          bind:value={password}
+          placeholder="••••••••"
+          icon="🔒"
+          showToggle={true}
+        />
+
+        <Button
+          type="submit"
+          variant="primary"
+          {loading}
+          disabled={loading}
+        >
+          Sign In
+        </Button>
+      </form>
     </div>
   </main>
 

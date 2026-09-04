@@ -30,6 +30,12 @@ export async function apiRequest<T = any>(
     });
 
     if (!response.ok) {
+      // Redirect to login on 401 (session expired or invalid)
+      if (response.status === 401 && typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login';
+        return { error: { error: 'Unauthorized', message: 'Session expired' } };
+      }
+
       const error = await response.json().catch(() => ({
         error: 'Unknown Error',
         message: `Request failed with status ${response.status}`

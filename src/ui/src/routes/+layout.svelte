@@ -3,10 +3,14 @@
   import Header from '$lib/components/Header.svelte';
   
   export let data;
+
+  $: isAuthenticated = !!data?.user;
 </script>
 
 <div class="min-h-screen flex flex-col">
-  <Header {data} />
+  {#if isAuthenticated}
+    <Header {data} />
+  {/if}
   <main class="flex-1">
     <slot />
   </main>

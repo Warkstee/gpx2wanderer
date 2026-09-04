@@ -1,6 +1,7 @@
 <script lang="ts">
   export let variant: 'primary' | 'secondary' | 'destructive' | 'ghost' = 'primary';
   export let size: 'sm' | 'md' = 'md';
+  export let type: 'button' | 'submit' | 'reset' = 'button';
   export let disabled: boolean = false;
   export let loading: boolean = false;
   
@@ -26,6 +27,7 @@
 </script>
 
 <button
+  {type}
   {disabled}
   class="{baseClasses} {variantClasses} {sizeClasses}"
   class:opacity-50={disabled || loading}

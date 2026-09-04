@@ -1,16 +1,17 @@
 <script lang="ts">
   import { page } from '$app/stores';
-  
-  export let data;
+  import { goto } from '$app/navigation';
+  import { post } from '$lib/api';
   
   const navItems = [
     { href: '/dashboard', label: 'Routes' },
     { href: '/credentials', label: 'Credentials' },
     { href: '/logs', label: 'Logs' }
   ];
-  
-  function isActive(href: string): boolean {
-    return page.url?.pathname === href;
+
+  async function handleLogout() {
+    await post('/api/auth/logout');
+    goto('/login');
   }
 </script>
 
@@ -34,7 +35,7 @@
       {#each navItems as item}
         <a 
           href={item.href}
-          class="px-3 py-1.5 text-[13px] rounded transition-colors {isActive(item.href) ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-medium' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-white'}"
+          class="px-3 py-1.5 text-[13px] rounded transition-colors {$page.url.pathname === item.href ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-medium' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-white'}"
         >
           {item.label}
         </a>
@@ -47,8 +48,8 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
       </svg>
     </div>
-    <a 
-      href="/api/auth/logout" 
+    <button
+      on:click={handleLogout}
       aria-label="Sign Out"
       class="text-on-surface-variant hover:text-red-400 transition-colors flex items-center justify-center p-1"
       title="Sign Out"
@@ -56,6 +57,6 @@
       <svg class="w-[20px] h-[20px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
       </svg>
-    </a>
+    </button>
   </div>
 </header>
