@@ -8,7 +8,9 @@
     "gpx2wanderer": "./dist/index.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cd src/ui && npm run build",
+    "build:backend": "tsc",
+    "build:ui": "cd src/ui && npm run build",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
     "lint": "eslint src",
@@ -21,7 +23,9 @@
     "smoke-test:strava": "node dist/smoke-test-strava.js",
     "smoke-test:strava-download": "node dist/smoke-test-strava-download.js",
     "server": "node dist/server/index.js",
-    "server:dev": "tsc && node dist/server/index.js"
+    "server:dev": "tsc && node dist/server/index.js",
+    "ui:dev": "cd src/ui && npm run dev",
+    "ui:build": "cd src/ui && npm run build"
   },
   "keywords": [
     "gpx",

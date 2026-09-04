@@ -10,6 +10,9 @@ import { logger } from 'hono/logger';
 import { prettyJSON } from 'hono/pretty-json';
 import { secureHeaders } from 'hono/secure-headers';
 import { getCookie } from 'hono/cookie';
+import { serveStatic } from '@hono/node-server/serve-static';
+import { readFileSync, existsSync, statSync } from 'fs';
+import { join } from 'path';
 import * as loggerUtil from '../utils/logger.js';
 import { createAuthRoutes } from './routes/auth.js';
 import { createConfigRoutes } from './routes/config.js';
@@ -117,6 +120,32 @@ export function createApp(): Hono<Env> {
   // Register logs routes (all require authentication)
   const logsRoutes = createLogsRoutes();
   app.route('/api/logs', logsRoutes);
+
+  // Serve static UI files (built by SvelteKit)
+  // Only in production - during development, use Vite dev server
+  if (process.env.NODE_ENV === 'production') {
+    const uiPath = process.env.UI_PATH || './src/ui/build';
+    
+    // Serve all static files from the build directory
+    app.use('*', serveStatic({ root: uiPath }));
+    
+    // SPA fallback: serve index.html for routes that don't match a file
+    app.get('*', async (c, next) => {
+      // Skip if it's an API route
+      if (c.req.path.startsWith('/api/')) {
+        await next();
+        return;
+      }
+      
+      const indexPath = join(uiPath, 'index.html');
+      if (existsSync(indexPath)) {
+        const indexFile = readFileSync(indexPath, 'utf-8');
+        return c.html(indexFile);
+      }
+      
+      return c.html('<h1>UI not built</h1><p>Run npm run ui:build first</p>', 404);
+    });
+  }
 
   // Global error handler
   app.onError((err, c) => {
