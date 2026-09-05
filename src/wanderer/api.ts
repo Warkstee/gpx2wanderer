@@ -522,21 +522,29 @@ export async function deleteTag(host: string, cookie: string, tagId: string): Pr
 }
 
 /**
- * Find an existing trail by source tag (e.g., "gpx2wanderer-{sourceId}").
+ * Find existing trails by source tags (e.g., "gpx2wanderer-{sourceId}").
  * 
- * Uses the multi-index search endpoint to search for trails with the given tag.
+ * Uses a single search query with OR'd terms to efficiently find multiple trails at once.
+ * Returns a Map mapping each source tag to its corresponding trail ID (if found).
  * 
  * @param host - Wanderer instance base URL
  * @param cookie - Session cookie for authentication
- * @param sourceTag - Source tag name (e.g., "gpx2wanderer-0123456789")
- * @returns Trail ID if found, null otherwise
+ * @param sourceTags - Array of source tag names (e.g., ["gpx2wanderer-komoot-123", "gpx2wanderer-strava-456"])
+ * @returns Map of sourceTag → trailId (only includes tags that were found)
  */
-export async function findTrailBySourceTag(
+export async function findTrailsBySourceTags(
   host: string,
   cookie: string,
-  sourceTag: string,
-): Promise<string | null> {
-  const url = `${host}/api/v1/search/multi`;
+  sourceTags: string[],
+): Promise<Map<string, string>> {
+  if (sourceTags.length === 0) {
+    return new Map();
+  }
+
+  const url = `${host}/api/v1/search/trails`;
+
+  // Build a single query with OR'd terms for efficiency
+  const query = sourceTags.join(' OR ');
 
   let response: Response;
   try {
@@ -547,12 +555,8 @@ export async function findTrailBySourceTag(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        queries: [
-          {
-            indexUid: 'trails',
-            q: sourceTag,
-          },
-        ],
+        q: query,
+        limit: sourceTags.length, // We expect at most one trail per tag
       }),
     });
   } catch (err) {
@@ -565,24 +569,24 @@ export async function findTrailBySourceTag(
   }
 
   const data = await response.json() as {
-    results: Array<{
-      indexUid: string;
-      hits: Array<{ id: string; tags?: string[] }>;
-    }>;
+    hits: Array<{ id: string; tags?: string[] }>;
   };
 
-  // Find the trails result and check if any hit has our tag
-  const trailsResult = data.results.find(r => r.indexUid === 'trails');
-  if (!trailsResult || trailsResult.hits.length === 0) {
-    return null;
+  // Build a map of sourceTag → trailId
+  const result = new Map<string, string>();
+  
+  for (const hit of data.hits) {
+    if (hit.tags) {
+      for (const tag of hit.tags) {
+        // Check if this tag is one of our source tags
+        if (sourceTags.includes(tag)) {
+          result.set(tag, hit.id);
+        }
+      }
+    }
   }
 
-  // Find a trail that has our exact tag
-  const matchingTrail = trailsResult.hits.find(hit => 
-    hit.tags && hit.tags.includes(sourceTag)
-  );
-
-  return matchingTrail?.id ?? null;
+  return result;
 }
 
 /**

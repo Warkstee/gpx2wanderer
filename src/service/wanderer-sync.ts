@@ -9,7 +9,7 @@ import {
   uploadTrail,
   updateTrail,
   DuplicateTrailError,
-  findTrailBySourceTag,
+  findTrailsBySourceTags,
   createTag,
   deleteTag,
   listTags,
@@ -87,11 +87,12 @@ export async function syncToWanderer(
     const sourceTag = `gpx2wanderer-${sourceId}`;
     logger.debug(`Checking for existing trail with tag: ${sourceTag}`);
     
-    const existingTrailId = await findTrailBySourceTag(
+    const results = await findTrailsBySourceTags(
       session.host,
       session.cookie,
-      sourceTag
+      [sourceTag]
     );
+    const existingTrailId = results.get(sourceTag) ?? null;
 
     if (existingTrailId) {
       logger.info(`Found existing trail ID: ${existingTrailId}`);
