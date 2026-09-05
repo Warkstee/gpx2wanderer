@@ -19,6 +19,7 @@ import { createConfigRoutes } from './routes/config.js';
 import { createKomootRoutes, createStravaRoutes } from './routes/providers.js';
 import { createMaintenanceRoutes } from './routes/maintenance.js';
 import { createLogsRoutes } from './routes/logs.js';
+import { createRoutesEndpoint } from './routes/routes.js';
 
 /**
  * Session store for authenticated users.
@@ -112,6 +113,10 @@ export function createApp(): Hono<Env> {
 
   const stravaRoutes = createStravaRoutes();
   app.route('/api/strava', stravaRoutes);
+
+  // Register unified routes endpoint (all require authentication)
+  const routesEndpoint = createRoutesEndpoint();
+  app.route('/api/routes', routesEndpoint);
 
   // Register maintenance routes (all require authentication)
   const maintenanceRoutes = createMaintenanceRoutes();
