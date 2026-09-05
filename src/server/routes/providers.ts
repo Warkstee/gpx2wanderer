@@ -12,6 +12,7 @@ import { serializeGPX } from '../../gpx/serializer.js';
 import { processGPX } from '../../service/pipeline.js';
 import { syncToWanderer } from '../../service/wanderer-sync.js';
 import { resolveWandererAuth } from '../../service/auth.js';
+import { getCachedRoutes, setCachedRoutes, invalidateRouteCache, updateRouteSyncStatus } from '../cache.js';
 import type { Env } from '../app.js';
 import * as logger from '../../utils/logger.js';
 
@@ -25,6 +26,8 @@ export function createKomootRoutes(): Hono<Env> {
    * GET /api/komoot/routes
    * 
    * List all planned routes from Komoot.
+   * Supports caching with TTL-based invalidation.
+   * Use ?refresh=true to force cache invalidation.
    */
   komoot.get('/routes', async (c) => {
     try {
@@ -36,10 +39,26 @@ export function createKomootRoutes(): Hono<Env> {
         }, 503);
       }
 
-      // Authenticate and list routes
-      const provider = new KomootProvider();
-      await provider.authenticate();
-      const routes = await provider.listRoutes();
+      // Check for refresh parameter
+      const refresh = c.req.query('refresh') === 'true';
+      if (refresh) {
+        invalidateRouteCache('komoot');
+        logger.debug('Komoot route cache invalidated via refresh parameter');
+      }
+
+      // Try to get cached routes first
+      let routes = getCachedRoutes('komoot');
+      
+      if (!routes) {
+        // Cache miss or expired — fetch from provider
+        logger.debug('Fetching Komoot routes from provider...');
+        const provider = new KomootProvider();
+        await provider.authenticate();
+        routes = await provider.listRoutes();
+        
+        // Cache the results
+        setCachedRoutes('komoot', routes);
+      }
 
       return c.json(routes);
     } catch (err) {
@@ -124,6 +143,9 @@ export function createKomootRoutes(): Hono<Env> {
 
       timings.total = Date.now() - startTime;
 
+      // Update sync status cache
+      updateRouteSyncStatus('komoot', routeId, 'synced');
+
       return c.json({
         success: true,
         trail: {
@@ -167,6 +189,8 @@ export function createStravaRoutes(): Hono<Env> {
    * GET /api/strava/routes
    * 
    * List all routes from Strava.
+   * Supports caching with TTL-based invalidation.
+   * Use ?refresh=true to force cache invalidation.
    */
   strava.get('/routes', async (c) => {
     try {
@@ -178,10 +202,26 @@ export function createStravaRoutes(): Hono<Env> {
         }, 503);
       }
 
-      // Authenticate and list routes
-      const provider = new StravaProvider();
-      await provider.authenticate();
-      const routes = await provider.listRoutes();
+      // Check for refresh parameter
+      const refresh = c.req.query('refresh') === 'true';
+      if (refresh) {
+        invalidateRouteCache('strava');
+        logger.debug('Strava route cache invalidated via refresh parameter');
+      }
+
+      // Try to get cached routes first
+      let routes = getCachedRoutes('strava');
+      
+      if (!routes) {
+        // Cache miss or expired — fetch from provider
+        logger.debug('Fetching Strava routes from provider...');
+        const provider = new StravaProvider();
+        await provider.authenticate();
+        routes = await provider.listRoutes();
+        
+        // Cache the results
+        setCachedRoutes('strava', routes);
+      }
 
       return c.json(routes);
     } catch (err) {
@@ -265,6 +305,9 @@ export function createStravaRoutes(): Hono<Env> {
       logger.info(`Uploaded to Wanderer in ${timings.upload}ms`);
 
       timings.total = Date.now() - startTime;
+
+      // Update sync status cache
+      updateRouteSyncStatus('strava', routeId, 'synced');
 
       return c.json({
         success: true,
