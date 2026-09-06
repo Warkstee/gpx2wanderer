@@ -30,6 +30,7 @@ export interface UnifiedRoute {
   date: string; // ISO 8601
   syncStatus: 'synced' | 'not_synced';
   sourceTag: string; // e.g., "gpx2wanderer-komoot-12345"
+  tourType?: string; // Provider-specific tour type (e.g., "tour_planned", "tour_recorded")
 }
 
 /**
@@ -229,6 +230,7 @@ async function enrichWithSyncStatus(
       date: route.date,
       syncStatus,
       sourceTag,
+      tourType: route.tourType,
     };
   });
 }

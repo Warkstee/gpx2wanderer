@@ -45,4 +45,5 @@ export interface RouteSummary {
   elevationGain: number; // meters
   activityType: string;
   date: string;
+  tourType?: string; // Provider-specific tour type (e.g., "tour_planned", "tour_recorded")
 }

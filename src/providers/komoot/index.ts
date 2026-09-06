@@ -75,9 +75,9 @@ export class KomootProvider implements RouteProvider {
   }
 
   /**
-   * List available planned routes from Komoot.
+   * List all planned routes from Komoot.
    *
-   * Fetches all tours and filters to only include "tour_planned" type tours.
+   * Fetches tours filtered by type "tour_planned" at the API level.
    * Elevation gain is set to 0 as it's not available in the tour summary.
    *
    * @returns Array of route summaries
@@ -87,15 +87,12 @@ export class KomootProvider implements RouteProvider {
       throw new Error('Not authenticated. Call authenticate() first.');
     }
 
-    logger.debug('Fetching all tours from Komoot...');
-    const tours = await this.client.listAllTours();
+    logger.debug('Fetching planned tours from Komoot...');
+    const tours = await this.client.listAllTours(100, 'tour_planned');
 
-    // Filter to only planned tours
-    const plannedTours = tours.filter(tour => tour.type === 'tour_planned');
+    logger.debug(`Found ${tours.length} planned tours`);
 
-    logger.debug(`Found ${plannedTours.length} planned tours out of ${tours.length} total tours`);
-
-    return plannedTours.map(tour => this.mapTourToRouteSummary(tour));
+    return tours.map(tour => this.mapTourToRouteSummary(tour));
   }
 
   /**
@@ -109,6 +106,7 @@ export class KomootProvider implements RouteProvider {
       elevationGain: tour.elevation_up,
       activityType: tour.sport,
       date: tour.date,
+      tourType: tour.type,
     };
   }
 

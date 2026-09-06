@@ -83,6 +83,7 @@ export class StravaProvider implements RouteProvider {
       elevationGain: route.elevation_gain,
       activityType: typeMap[route.type] || 'unknown',
       date: new Date(route.timestamp * 1000).toISOString(),
+      tourType: `strava_type_${route.type}`,
     };
   }
 

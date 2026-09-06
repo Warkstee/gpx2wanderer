@@ -1,13 +1,21 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+
   export let type: 'text' | 'password' = 'text';
   export let label: string = '';
   export let value: string = '';
   export let placeholder: string = '';
   export let icon: string = '';
   export let showToggle: boolean = false;
+  export let id: string = '';
   
   let visible = type !== 'password';
-  
+  let inputId: string;
+
+  onMount(() => {
+    inputId = id || `input-${Math.random().toString(36).substring(2, 9)}`;
+  });
+
   function toggleVisibility() {
     visible = !visible;
   }
@@ -15,7 +23,7 @@
 
 <div>
   {#if label}
-    <label class="block font-mono text-[11px] uppercase tracking-wider text-on-surface-variant mb-1.5">
+    <label for={inputId} class="block font-mono text-[11px] uppercase tracking-wider text-on-surface-variant mb-1.5">
       {label}
     </label>
   {/if}
@@ -25,6 +33,7 @@
     {/if}
     {#if type === 'password' && !visible}
       <input
+        {id}
         type="password"
         bind:value
         {placeholder}
@@ -37,6 +46,7 @@
       />
     {:else}
       <input
+        {id}
         type="text"
         bind:value
         {placeholder}

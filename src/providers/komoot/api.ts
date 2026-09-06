@@ -183,17 +183,22 @@ export class KomootClient {
   /**
    * Fetch a paginated list of the user's tours.
    *
-   * @param page - Page number (1-based)
+   * @param page - Page number (0-based)
    * @param limit - Number of tours per page
+   * @param type - Optional tour type filter (e.g., "tour_planned", "tour_recorded")
    * @returns Tours response with embedded tours and pagination metadata
    */
-  async listTours(page: number = 1, limit: number = 100): Promise<ToursResponse> {
+  async listTours(page: number = 0, limit: number = 100, type?: string): Promise<ToursResponse> {
     const query = new URLSearchParams({
       page: String(page),
       sort_field: 'date',
       sort_direction: 'desc',
       limit: String(limit),
     });
+
+    if (type) {
+      query.set('type', type);
+    }
 
     return this.get<ToursResponse>(
       `/v007/users/${encodeURIComponent(this.userID)}/tours/?${query}`,
@@ -205,16 +210,17 @@ export class KomootClient {
    * Includes a small delay between requests to avoid rate limiting.
    *
    * @param limit - Number of tours per page (default: 100)
+   * @param type - Optional tour type filter (e.g., "tour_planned", "tour_recorded")
    * @returns Array of all tours
    */
-  async listAllTours(limit: number = 100): Promise<TourSummary[]> {
+  async listAllTours(limit: number = 100, type?: string): Promise<TourSummary[]> {
     const allTours: TourSummary[] = [];
-    let page = 1;
+    let page = 0;
     let totalPages = 1;
 
     do {
       logger.debug(`Fetching tours page ${page}/${totalPages}...`);
-      const response = await this.listTours(page, limit);
+      const response = await this.listTours(page, limit, type);
       
       // Handle missing _embedded field gracefully
       if (response._embedded?.tours) {
@@ -228,10 +234,10 @@ export class KomootClient {
       page++;
 
       // Add delay between requests to avoid rate limiting
-      if (page <= totalPages) {
+      if (page < totalPages) {
         await new Promise(resolve => setTimeout(resolve, PAGINATION_DELAY_MS));
       }
-    } while (page <= totalPages);
+    } while (page < totalPages);
 
     return allTours;
   }

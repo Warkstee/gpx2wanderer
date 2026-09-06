@@ -1,6 +1,31 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import Card from '$lib/components/Card.svelte';
   import Badge from '$lib/components/Badge.svelte';
+  import RouteTable from '$lib/components/RouteTable.svelte';
+  import { get } from '$lib/api';
+  import type { UnifiedRoute, UnifiedRoutesResponse } from '../../../server/routes/routes.js';
+
+  let routes: UnifiedRoute[] = [];
+  let loading = true;
+  let error: string | null = null;
+
+  async function fetchRoutes() {
+    loading = true;
+    error = null;
+    
+    const result = await get<UnifiedRoutesResponse>('/api/routes?page=1&perPage=100');
+    
+    if (result.data) {
+      routes = result.data.routes;
+    } else if (result.error) {
+      error = result.error.message;
+    }
+    
+    loading = false;
+  }
+
+  onMount(fetchRoutes);
 </script>
 
 <div class="mx-auto w-full px-8 flex-1 flex flex-col justify-start py-6 max-w-7xl">
@@ -48,10 +73,11 @@
     </Card>
   </div>
 
-  <Card>
-    <div class="text-center py-12 text-on-surface-variant">
-      <p class="text-lg mb-2">Route listing will be implemented in GPWA-38</p>
-      <p class="text-sm">This placeholder shows the layout structure</p>
+  {#if error}
+    <div class="bg-red-500/10 border border-red-500/30 rounded p-4 mb-6">
+      <p class="text-red-400 text-sm">Error loading routes: {error}</p>
     </div>
-  </Card>
+  {/if}
+
+  <RouteTable {routes} {loading} />
 </div>
