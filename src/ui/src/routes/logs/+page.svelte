@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Card from '$lib/components/Card.svelte';
+  import Pagination from '$lib/components/Pagination.svelte';
   import { get } from '$lib/api';
 
   interface LogEntry {
@@ -30,7 +31,7 @@
 
   // Pagination state
   const PAGE_SIZE = 100;
-  let currentPage = 0;
+  let currentPage = 1; // 1-based for Pagination component
   let totalEntries = 0;
   let hasMore = false;
   let levelCounts = { info: 0, success: 0, warn: 0, error: 0, debug: 0 };
@@ -47,7 +48,7 @@
     
     const params = new URLSearchParams({
       limit: PAGE_SIZE.toString(),
-      offset: (currentPage * PAGE_SIZE).toString()
+      offset: ((currentPage - 1) * PAGE_SIZE).toString() // Convert 1-based to 0-based for API
     });
     
     if (activeLevel !== 'all') {
@@ -73,7 +74,7 @@
     const currentFilterState = `${activeLevel}-${searchQuery}`;
     if (currentFilterState !== prevFilterState) {
       prevFilterState = currentFilterState;
-      currentPage = 0;
+      currentPage = 1;
       fetchLogs();
     }
   }
@@ -98,7 +99,6 @@
 
   // Derived: stats (from server total)
   $: totalPages = Math.ceil(totalEntries / PAGE_SIZE);
-  $: currentPageDisplay = currentPage + 1;
 
   function formatTimestamp(ts: string): string {
     const d = new Date(ts);
@@ -338,33 +338,9 @@
   </div>
 
   <!-- Pagination Controls -->
-  {#if totalPages > 1}
-    <div class="flex items-center justify-between mt-4 px-2">
-      <div class="text-sm text-on-surface-variant font-mono">
-        Page {currentPageDisplay} of {totalPages}
-      </div>
-      <div class="flex items-center gap-2">
-        <button
-          on:click={() => { currentPage = Math.max(0, currentPage - 1); fetchLogs(); }}
-          disabled={currentPage === 0}
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface-container-low border border-outline-variant hover:bg-surface-container-high text-white text-xs font-medium transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-          </svg>
-          Previous
-        </button>
-        <button
-          on:click={() => { currentPage++; fetchLogs(); }}
-          disabled={!hasMore}
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface-container-low border border-outline-variant hover:bg-surface-container-high text-white text-xs font-medium transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          Next
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-          </svg>
-        </button>
-      </div>
-    </div>
-  {/if}
+  <Pagination
+    bind:currentPage
+    {hasMore}
+    on:pageChange={fetchLogs}
+  />
 </div>
