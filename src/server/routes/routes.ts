@@ -67,7 +67,7 @@ export function createRoutesEndpoint(): Hono<Env> {
     try {
       // Parse query parameters
       const page = Math.max(1, parseInt(c.req.query('page') || '1', 10));
-      const perPage = Math.min(100, Math.max(1, parseInt(c.req.query('perPage') || '20', 10)));
+      const perPage = Math.min(1000, Math.max(1, parseInt(c.req.query('perPage') || '20', 10)));
       const refresh = c.req.query('refresh') === 'true';
 
       if (refresh) {

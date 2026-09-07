@@ -1,6 +1,7 @@
 services:
   gpx2wanderer:
     build: .
+    hostname: gpx2wanderer
     ports:
       - "6721:6721"
     environment:

@@ -10,6 +10,7 @@ import type { GPXFile } from '../../gpx/types.js';
 import { StravaClient } from './api.js';
 import { loadStravaCredentials, type StravaCredentials } from '../auth/credentials.js';
 import { parseGPX } from '../../gpx/parser.js';
+import { mapSportToActivityType } from '../../wanderer/category-mapping.js';
 import * as logger from '../../utils/logger.js';
 
 export class StravaProvider implements RouteProvider {
@@ -68,20 +69,12 @@ export class StravaProvider implements RouteProvider {
    * Map a Strava RouteSummary to the provider-agnostic RouteSummary interface.
    */
   private mapRouteToSummary(route: { id_str: string; name: string; distance: number; elevation_gain: number; type: number; timestamp: number }): ProviderRouteSummary {
-    // Map Strava route type to activity type string
-    const typeMap: Record<number, string> = {
-      1: 'ride',
-      2: 'run',
-      3: 'hike',
-      4: 'walk',
-    };
-
     return {
       id: route.id_str,
       name: route.name,
       distance: route.distance,
       elevationGain: route.elevation_gain,
-      activityType: typeMap[route.type] || 'unknown',
+      activityType: mapSportToActivityType('strava', String(route.type)),
       date: new Date(route.timestamp * 1000).toISOString(),
       tourType: `strava_type_${route.type}`,
     };
@@ -123,19 +116,8 @@ export class StravaProvider implements RouteProvider {
     logger.debug(`Fetching metadata for route ${routeId}...`);
     const route = await this.client.getRouteDetails(routeId);
 
-    // Map Strava type to sport code for category mapping
-    const typeMap: Record<number, string> = {
-      1: '1', // Ride
-      2: '2', // Run
-      3: '3', // Hike
-      4: '4', // Walk
-      6: '6', // Gravel
-    };
-
-    const sportCode = typeMap[route.type] || String(route.type);
-
     return {
-      sport: sportCode,
+      sport: String(route.type),
       duration: route.estimated_moving_time,
     };
   }

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import type { UnifiedRoute } from '../../../server/routes/routes.js';
+  import type { UnifiedRoute } from '../../../../server/routes/routes.js';
+  import Badge from './Badge.svelte';
 
   export let routes: UnifiedRoute[] = [];
   export let loading: boolean = false;
@@ -12,25 +13,11 @@
     return `${Math.round(meters)} m ↗`;
   }
 
-  function providerBadgeClasses(provider: string): string {
-    if (provider === 'strava') {
-      return 'bg-amber-500/10 text-amber-300 border-amber-500/20';
+  function getProviderUrl(route: UnifiedRoute): string {
+    if (route.provider === 'strava') {
+      return `https://www.strava.com/routes/${route.id}`;
     }
-    return 'bg-sky-500/10 text-sky-300 border-sky-500/20';
-  }
-
-  function providerDotColor(provider: string): string {
-    if (provider === 'strava') {
-      return 'bg-amber-400';
-    }
-    return 'bg-sky-400';
-  }
-
-  function syncStatusClasses(status: string): string {
-    if (status === 'synced') {
-      return 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
-    }
-    return 'bg-slate-500/20 text-slate-300 border-slate-500/30';
+    return `https://www.komoot.com/tour/${route.id}`;
   }
 </script>
 
@@ -56,49 +43,54 @@
   {:else}
     <div class="overflow-x-auto w-full">
       <table class="w-full text-left font-body-md text-body-md border-collapse">
-        <thead class="bg-surface-container-lowest text-on-surface-variant font-label-caps text-label-caps uppercase border-b border-outline-variant">
+        <thead class="bg-surface-container-lowest text-on-surface-variant border-b border-outline-variant">
           <tr>
-            <th class="py-space-sm px-space-md" scope="col">Route Details & Metrics</th>
-            <th class="py-space-sm px-space-md" scope="col">Source</th>
-            <th class="py-space-sm px-space-md" scope="col">Sync Status</th>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-on-surface-variant/60" scope="col">ROUTE</th>
+            <th class="text-right px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-on-surface-variant/60 w-64" scope="col">DETAILS & METRICS</th>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-on-surface-variant/60 w-16" scope="col">SOURCE</th>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-on-surface-variant/60 w-32" scope="col">SYNC STATUS</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-outline-variant/50 text-on-surface">
           {#each routes as route, i}
             <tr class="hover:bg-surface-container-high/60 transition-colors {i % 2 === 1 ? 'bg-surface-container-low/40' : ''}">
-              <td class="py-space-sm px-space-md">
-                <div class="flex flex-col">
-                  <span class="font-title-md text-title-md text-white">{route.name}</span>
-                  <div class="flex items-center gap-space-xs mt-0.5">
-                    <span class="font-label-code text-label-code text-emerald-400 font-semibold">{formatDistance(route.distance)}</span>
-                    <span class="text-slate-600">•</span>
-                    <span class="font-label-code text-label-code text-slate-400">{formatElevation(route.elevationGain)}</span>
-                    <span class="text-slate-600">•</span>
-                    <span class="font-label-caps text-label-caps px-space-2xs py-0.5 rounded bg-surface-container-highest/60 text-slate-300 border border-outline-variant/50">{route.activityType}</span>
-                  </div>
+              <td class="py-2 px-4">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-semibold text-white">{route.name}</span>
+                  <a
+                    href={getProviderUrl(route)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-slate-500 hover:text-emerald-400 transition-colors"
+                    title="View on {route.provider === 'strava' ? 'Strava' : 'Komoot'}"
+                  >
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                    </svg>
+                  </a>
                 </div>
               </td>
-              <td class="py-space-sm px-space-md whitespace-nowrap">
-                <span class="inline-flex items-center gap-space-2xs px-space-xs py-0.5 rounded font-label-caps text-label-caps {providerBadgeClasses(route.provider)} border font-semibold">
-                  <span class="w-1.5 h-1.5 rounded-full {providerDotColor(route.provider)}"></span>
-                  {route.provider === 'strava' ? 'Strava' : 'Komoot'}
-                </span>
+              <td class="py-2 px-4 whitespace-nowrap text-right w-64">
+                <div class="inline-flex items-center gap-2">
+                  <span class="text-xs font-mono text-emerald-400 font-semibold">{formatDistance(route.distance)}</span>
+                  <span class="text-slate-600">·</span>
+                  <span class="text-xs font-mono text-slate-400">{formatElevation(route.elevationGain)}</span>
+                  <span class="text-slate-600">·</span>
+                  <span class="text-xs font-mono px-2 py-0.5 rounded bg-surface-container-highest/60 text-slate-300 border border-outline-variant/50">{route.activityType}</span>
+                </div>
               </td>
-              <td class="py-space-sm px-space-md whitespace-nowrap">
+              <td class="py-2 px-4 whitespace-nowrap w-16">
+                <Badge
+                  variant={route.provider === 'strava' ? 'warning' : 'info'}
+                  label={route.provider === 'strava' ? 'Strava' : 'Komoot'}
+                  pulsing={false}
+                />
+              </td>
+              <td class="py-2 px-4 whitespace-nowrap w-32">
                 {#if route.syncStatus === 'synced'}
-                  <span class="inline-flex items-center gap-space-2xs font-label-caps text-label-caps px-space-xs py-0.5 rounded {syncStatusClasses(route.syncStatus)} border">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    Synced
-                  </span>
+                  <Badge variant="success" label="Synced" pulsing={false} />
                 {:else}
-                  <span class="inline-flex items-center gap-space-2xs font-label-caps text-label-caps px-space-xs py-0.5 rounded {syncStatusClasses(route.syncStatus)} border">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path>
-                    </svg>
-                    Not Synced
-                  </span>
+                  <Badge variant="neutral" label="Not Synced" pulsing={false} />
                 {/if}
               </td>
             </tr>
