@@ -15,6 +15,9 @@ import {
   loadValhallaConfig,
   saveValhallaConfig,
 } from '../../providers/auth/credentials.js';
+import { login as wandererLogin } from '../../wanderer/api.js';
+import { login as komootLogin } from '../../providers/komoot/api.js';
+import { refreshAccessToken } from '../../providers/strava/api.js';
 import type { Env } from '../app.js';
 
 /**
@@ -56,7 +59,7 @@ export function createConfigRoutes(): Hono<Env> {
   /**
    * POST /api/config/wanderer
    * 
-   * Saves Wanderer credentials (host, username, password).
+   * Verifies and saves Wanderer credentials (host, username, password).
    */
   config.post('/wanderer', async (c) => {
     try {
@@ -70,9 +73,21 @@ export function createConfigRoutes(): Hono<Env> {
         }, 400);
       }
 
+      // Verify credentials by attempting login
+      try {
+        await wandererLogin(host, username, password);
+      } catch (verifyErr) {
+        const errorMessage = verifyErr instanceof Error ? verifyErr.message : String(verifyErr);
+        return c.json({ 
+          error: 'Verification Failed', 
+          message: `Wanderer credentials could not be verified: ${errorMessage}` 
+        }, 422);
+      }
+
+      // Save credentials only after successful verification
       saveWandererCredentials({ host, username, password });
       
-      return c.json({ message: 'Wanderer credentials saved successfully' });
+      return c.json({ message: 'Wanderer credentials verified and saved successfully' });
     } catch (err) {
       return c.json({ 
         error: 'Internal Server Error', 
@@ -105,7 +120,7 @@ export function createConfigRoutes(): Hono<Env> {
   /**
    * POST /api/config/komoot
    * 
-   * Saves Komoot credentials (email, password).
+   * Verifies and saves Komoot credentials (email, password).
    * Note: token and userID are obtained during authentication, not configured here.
    */
   config.post('/komoot', async (c) => {
@@ -120,7 +135,18 @@ export function createConfigRoutes(): Hono<Env> {
         }, 400);
       }
 
-      // Save with empty token and userID (will be populated during auth)
+      // Verify credentials by attempting login
+      try {
+        await komootLogin(email, password);
+      } catch (verifyErr) {
+        const errorMessage = verifyErr instanceof Error ? verifyErr.message : String(verifyErr);
+        return c.json({ 
+          error: 'Verification Failed', 
+          message: `Komoot credentials could not be verified: ${errorMessage}` 
+        }, 422);
+      }
+
+      // Save credentials only after successful verification
       saveKomootCredentials({ 
         email, 
         password, 
@@ -128,7 +154,7 @@ export function createConfigRoutes(): Hono<Env> {
         userID: '' 
       });
       
-      return c.json({ message: 'Komoot credentials saved successfully' });
+      return c.json({ message: 'Komoot credentials verified and saved successfully' });
     } catch (err) {
       return c.json({ 
         error: 'Internal Server Error', 
@@ -162,7 +188,7 @@ export function createConfigRoutes(): Hono<Env> {
   /**
    * POST /api/config/strava
    * 
-   * Saves Strava credentials (clientId, clientSecret, refreshToken).
+   * Verifies and saves Strava credentials (clientId, clientSecret, refreshToken).
    * The refreshToken is required for Strava API access.
    */
   config.post('/strava', async (c) => {
@@ -177,9 +203,21 @@ export function createConfigRoutes(): Hono<Env> {
         }, 400);
       }
 
+      // Verify credentials by attempting token refresh
+      try {
+        await refreshAccessToken({ clientId, clientSecret, refreshToken });
+      } catch (verifyErr) {
+        const errorMessage = verifyErr instanceof Error ? verifyErr.message : String(verifyErr);
+        return c.json({ 
+          error: 'Verification Failed', 
+          message: `Strava credentials could not be verified: ${errorMessage}` 
+        }, 422);
+      }
+
+      // Save credentials only after successful verification
       saveStravaCredentials({ clientId, clientSecret, refreshToken });
       
-      return c.json({ message: 'Strava credentials saved successfully' });
+      return c.json({ message: 'Strava credentials verified and saved successfully' });
     } catch (err) {
       return c.json({ 
         error: 'Internal Server Error', 
@@ -211,7 +249,7 @@ export function createConfigRoutes(): Hono<Env> {
   /**
    * POST /api/config/valhalla
    * 
-   * Saves Valhalla configuration (url).
+   * Verifies and saves Valhalla configuration (url).
    */
   config.post('/valhalla', async (c) => {
     try {
@@ -225,15 +263,133 @@ export function createConfigRoutes(): Hono<Env> {
         }, 400);
       }
 
+      // Verify Valhalla is reachable by checking /status endpoint
+      try {
+        const statusUrl = `${url.replace(/\/$/, '')}/status`;
+        const response = await fetch(statusUrl, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Valhalla returned status ${response.status}`);
+        }
+
+        // Verify response contains expected fields
+        const data = await response.json() as { version?: string; available_actions?: string[] };
+        if (!data.version || !data.available_actions) {
+          throw new Error('Invalid Valhalla response - missing version or available_actions');
+        }
+      } catch (verifyErr) {
+        const errorMessage = verifyErr instanceof Error ? verifyErr.message : String(verifyErr);
+        return c.json({ 
+          error: 'Verification Failed', 
+          message: `Valhalla could not be reached: ${errorMessage}` 
+        }, 422);
+      }
+
+      // Save configuration only after successful verification
       saveValhallaConfig({ url });
       
-      return c.json({ message: 'Valhalla configuration saved successfully' });
+      return c.json({ message: 'Valhalla configuration verified and saved successfully' });
     } catch (err) {
       return c.json({ 
         error: 'Internal Server Error', 
         message: 'Failed to save Valhalla configuration' 
       }, 500);
     }
+  });
+
+  // ── Ping All ──────────────────────────────────────────────────────────
+
+  /**
+   * POST /api/config/ping-all
+   * 
+   * Verifies all saved credentials in parallel. Returns per-service results.
+   * Services without saved credentials are reported as skipped.
+   */
+  config.post('/ping-all', async (c) => {
+    interface PingResult {
+      status: 'ok' | 'fail' | 'skip';
+      message: string;
+    }
+
+    const results: Record<string, PingResult> = {};
+
+    // Run all verifications in parallel
+    const checks = await Promise.allSettled([
+      // Wanderer
+      (async () => {
+        const creds = loadWandererCredentials();
+        if (!creds) return { name: 'wanderer', result: { status: 'skip', message: 'Not configured' } as PingResult };
+        try {
+          await wandererLogin(creds.host, creds.username, creds.password);
+          return { name: 'wanderer', result: { status: 'ok', message: 'Connected' } as PingResult };
+        } catch (err) {
+          return { name: 'wanderer', result: { status: 'fail', message: err instanceof Error ? err.message : String(err) } as PingResult };
+        }
+      })(),
+      // Komoot
+      (async () => {
+        const creds = loadKomootCredentials();
+        if (!creds) return { name: 'komoot', result: { status: 'skip', message: 'Not configured' } as PingResult };
+        try {
+          await komootLogin(creds.email, creds.password);
+          return { name: 'komoot', result: { status: 'ok', message: 'Connected' } as PingResult };
+        } catch (err) {
+          return { name: 'komoot', result: { status: 'fail', message: err instanceof Error ? err.message : String(err) } as PingResult };
+        }
+      })(),
+      // Strava
+      (async () => {
+        const creds = loadStravaCredentials();
+        if (!creds) return { name: 'strava', result: { status: 'skip', message: 'Not configured' } as PingResult };
+        try {
+          await refreshAccessToken(creds);
+          return { name: 'strava', result: { status: 'ok', message: 'Connected' } as PingResult };
+        } catch (err) {
+          return { name: 'strava', result: { status: 'fail', message: err instanceof Error ? err.message : String(err) } as PingResult };
+        }
+      })(),
+      // Valhalla
+      (async () => {
+        const valhallaConfig = loadValhallaConfig();
+        if (!valhallaConfig) return { name: 'valhalla', result: { status: 'skip', message: 'Not configured' } as PingResult };
+        try {
+          const statusUrl = `${valhallaConfig.url.replace(/\/$/, '')}/status`;
+          const response = await fetch(statusUrl, { method: 'GET', headers: { 'Accept': 'application/json' } });
+          if (!response.ok) throw new Error(`Valhalla returned status ${response.status}`);
+          const data = await response.json() as { version?: string; available_actions?: string[] };
+          if (!data.version || !data.available_actions) throw new Error('Invalid Valhalla response');
+          return { name: 'valhalla', result: { status: 'ok', message: `Connected (v${data.version})` } as PingResult };
+        } catch (err) {
+          return { name: 'valhalla', result: { status: 'fail', message: err instanceof Error ? err.message : String(err) } as PingResult };
+        }
+      })(),
+    ]);
+
+    // Collect results
+    for (const check of checks) {
+      if (check.status === 'fulfilled') {
+        results[check.value.name] = check.value.result;
+      }
+    }
+
+    const allOk = Object.values(results).every(r => r.status === 'ok' || r.status === 'skip');
+    const failCount = Object.values(results).filter(r => r.status === 'fail').length;
+    const okCount = Object.values(results).filter(r => r.status === 'ok').length;
+    const skipCount = Object.values(results).filter(r => r.status === 'skip').length;
+
+    let summary: string;
+    if (failCount === 0 && skipCount === 0) {
+      summary = 'All services connected successfully';
+    } else if (failCount === 0) {
+      summary = `${okCount} connected, ${skipCount} not configured`;
+    } else {
+      summary = `${failCount} failed, ${okCount} connected, ${skipCount} not configured`;
+    }
+
+    return c.json({ summary, results });
   });
 
   return config;

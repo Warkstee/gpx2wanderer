@@ -2,10 +2,29 @@
   import Card from '$lib/components/Card.svelte';
   import Input from '$lib/components/Input.svelte';
   import Button from '$lib/components/Button.svelte';
-  import { post } from '$lib/api';
+  import Toast from '$lib/components/Toast.svelte';
+  import { post, get } from '$lib/api';
   import type { PageData } from './$types';
 
   export let data: PageData;
+
+  // Toast state
+  interface ToastMessage {
+    id: number;
+    message: string;
+    type: 'success' | 'error' | 'info' | 'warning';
+  }
+  let toasts: ToastMessage[] = [];
+  let toastIdCounter = 0;
+
+  function showToast(message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') {
+    const id = toastIdCounter++;
+    toasts = [...toasts, { id, message, type }];
+  }
+
+  function removeToast(id: number) {
+    toasts = toasts.filter(t => t.id !== id);
+  }
 
   // Wanderer Core credentials
   let wandererHost = data.wanderer.host || '';
@@ -76,11 +95,13 @@
     if (result.error) {
       wandererMessage = result.error.message || 'Failed to save credentials';
       wandererMessageType = 'error';
+      showToast(wandererMessage, 'error');
     } else {
-      wandererMessage = 'Credentials saved successfully';
+      wandererMessage = 'Credentials verified and saved successfully';
       wandererMessageType = 'success';
       wandererPassword = '';
       wandererConfigured = true;
+      showToast(wandererMessage, 'success');
     }
   }
 
@@ -104,11 +125,13 @@
     if (result.error) {
       komootMessage = result.error.message || 'Failed to save credentials';
       komootMessageType = 'error';
+      showToast(komootMessage, 'error');
     } else {
-      komootMessage = 'Credentials saved successfully';
+      komootMessage = 'Credentials verified and saved successfully';
       komootMessageType = 'success';
       komootPassword = '';
       komootConfigured = true;
+      showToast(komootMessage, 'success');
     }
   }
 
@@ -133,12 +156,14 @@
     if (result.error) {
       stravaMessage = result.error.message || 'Failed to save credentials';
       stravaMessageType = 'error';
+      showToast(stravaMessage, 'error');
     } else {
-      stravaMessage = 'Credentials saved successfully';
+      stravaMessage = 'Credentials verified and saved successfully';
       stravaMessageType = 'success';
       stravaClientSecret = '';
       stravaRefreshToken = '';
       stravaConfigured = true;
+      showToast(stravaMessage, 'success');
     }
   }
 
@@ -167,10 +192,45 @@
     if (result.error) {
       valhallaMessage = result.error.message || 'Failed to save configuration';
       valhallaMessageType = 'error';
+      showToast(valhallaMessage, 'error');
     } else {
-      valhallaMessage = 'Configuration saved successfully';
+      valhallaMessage = 'Configuration verified and saved successfully';
       valhallaMessageType = 'success';
       valhallaConfigured = true;
+      showToast(valhallaMessage, 'success');
+    }
+  }
+
+  // Ping All state
+  let pinging = false;
+
+  async function pingAll() {
+    pinging = true;
+
+    try {
+      const result = await post<{ summary: string; results: Record<string, { status: string; message: string }> }>('/api/config/ping-all');
+
+      if (result.error) {
+        showToast(result.error.message || 'Ping failed', 'error');
+      } else if (result.data) {
+        const { summary, results } = result.data;
+        const hasFailures = Object.values(results).some(r => r.status === 'fail');
+
+        // Show summary toast
+        showToast(summary, hasFailures ? 'warning' : 'success');
+
+        // Show individual toasts for failures
+        for (const [service, pingResult] of Object.entries(results)) {
+          if (pingResult.status === 'fail') {
+            const label = service.charAt(0).toUpperCase() + service.slice(1);
+            showToast(`${label}: ${pingResult.message}`, 'error');
+          }
+        }
+      }
+    } catch {
+      showToast('Failed to ping services', 'error');
+    } finally {
+      pinging = false;
     }
   }
 
@@ -182,9 +242,9 @@
     if (type === 'wanderer') {
       return { status: 'success', label: 'Local Node' };
     } else if (type === 'komoot') {
-      return { status: 'info', label: 'Authorized' };
+      return { status: 'success', label: 'Authorized' };
     } else if (type === 'strava') {
-      return { status: 'success', label: 'OAuth Active' };
+      return { status: 'success', label: 'Authorized' };
     } else if (type === 'valhalla') {
       return { status: 'success', label: 'Connected' };
     }
@@ -202,7 +262,7 @@
       </p>
     </div>
     <div class="shrink-0 flex items-center">
-      <Button variant="secondary" size="sm">
+      <Button variant="secondary" size="sm" loading={pinging} on:click={pingAll}>
         <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"></path>
         </svg>
@@ -387,4 +447,13 @@
       </div>
     </Card>
   </div>
+
+  <!-- Toast notifications -->
+  {#each toasts as toast (toast.id)}
+    <Toast
+      message={toast.message}
+      type={toast.type}
+      onClose={() => removeToast(toast.id)}
+    />
+  {/each}
 </div>
