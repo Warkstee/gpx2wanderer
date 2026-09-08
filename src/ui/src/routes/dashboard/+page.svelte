@@ -5,7 +5,9 @@
   import RouteTable from '$lib/components/RouteTable.svelte';
   import FilterToolbar from '$lib/components/FilterToolbar.svelte';
   import Pagination from '$lib/components/Pagination.svelte';
-  import { get } from '$lib/api';
+  import Toast from '$lib/components/Toast.svelte';
+  import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
+  import { get, post } from '$lib/api';
   import type { UnifiedRoute, UnifiedRoutesResponse } from '../../../../server/routes/routes.js';
 
   let routes: UnifiedRoute[] = [];
@@ -29,6 +31,29 @@
   // Pagination state
   let currentPage = 1;
   const perPage = 20;
+
+  // Sync state
+  let syncingRouteId: string | null = null;
+  let pendingSyncRoute: UnifiedRoute | null = null;
+  let showConfirmDialog = false;
+
+  // Toast state
+  interface ToastMessage {
+    id: number;
+    message: string;
+    type: 'success' | 'error' | 'info' | 'warning';
+  }
+  let toasts: ToastMessage[] = [];
+  let toastIdCounter = 0;
+
+  function showToast(message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') {
+    const id = toastIdCounter++;
+    toasts = [...toasts, { id, message, type }];
+  }
+
+  function removeToast(id: number) {
+    toasts = toasts.filter(t => t.id !== id);
+  }
 
   async function fetchRoutes() {
     loading = true;
@@ -107,6 +132,61 @@
   $: stravaSynced = routes.filter(r => r.provider === 'strava' && r.syncStatus === 'synced').length;
   $: komootTotal = routes.filter(r => r.provider === 'komoot').length;
   $: komootSynced = routes.filter(r => r.provider === 'komoot' && r.syncStatus === 'synced').length;
+
+  function handleSyncRequest(event: CustomEvent<{ route: UnifiedRoute }>) {
+    const route = event.detail.route;
+    
+    if (route.syncStatus === 'synced') {
+      // Show confirmation dialog for re-sync
+      pendingSyncRoute = route;
+      showConfirmDialog = true;
+    } else {
+      // Direct sync for not synced routes
+      syncRoute(route);
+    }
+  }
+
+  function handleConfirmSync() {
+    if (pendingSyncRoute) {
+      syncRoute(pendingSyncRoute);
+      pendingSyncRoute = null;
+    }
+  }
+
+  function handleCancelSync() {
+    pendingSyncRoute = null;
+  }
+
+  async function syncRoute(route: UnifiedRoute) {
+    syncingRouteId = route.id;
+    
+    try {
+      const endpoint = route.provider === 'komoot' 
+        ? `/api/komoot/routes/sync/${route.id}`
+        : `/api/strava/routes/sync/${route.id}`;
+      
+      const result = await post(endpoint);
+      
+      if (result.data && result.data.success) {
+        // Update route status in local cache
+        routes = routes.map(r => 
+          r.id === route.id 
+            ? { ...r, syncStatus: 'synced' as const }
+            : r
+        );
+        
+        showToast(`Route "${route.name}" synced successfully`, 'success');
+      } else {
+        const errorMsg = result.error?.message || 'Unknown error occurred';
+        showToast(`Failed to sync route: ${errorMsg}`, 'error');
+      }
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error occurred';
+      showToast(`Failed to sync route: ${errorMsg}`, 'error');
+    } finally {
+      syncingRouteId = null;
+    }
+  }
 
   onMount(() => {
     fetchRoutes();
@@ -188,7 +268,12 @@
   />
 
   <!-- Route Table -->
-  <RouteTable routes={paginatedRoutes} {loading} />
+  <RouteTable 
+    routes={paginatedRoutes} 
+    {loading}
+    {syncingRouteId}
+    on:sync={handleSyncRequest}
+  />
 
   <!-- Pagination -->
   {#if totalPages > 1}
@@ -197,4 +282,25 @@
       {totalPages}
     />
   {/if}
+
+  <!-- Toast Notifications -->
+  {#each toasts as toast (toast.id)}
+    <Toast
+      message={toast.message}
+      type={toast.type}
+      onClose={() => removeToast(toast.id)}
+    />
+  {/each}
+
+  <!-- Confirmation Dialog -->
+  <ConfirmDialog
+    bind:open={showConfirmDialog}
+    title="Re-sync Route"
+    message="This route is already synced to Wanderer. Re-syncing will overwrite any changes made in Wanderer. Do you want to continue?"
+    confirmLabel="Re-sync"
+    cancelLabel="Cancel"
+    variant="warning"
+    on:confirm={handleConfirmSync}
+    on:cancel={handleCancelSync}
+  />
 </div>

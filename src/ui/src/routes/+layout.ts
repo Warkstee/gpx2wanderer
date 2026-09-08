@@ -1,3 +1,13 @@
+/**
+ * Server-side layout data loading for authentication.
+ * 
+ * This load function runs before the layout renders, enabling:
+ * - Authentication checks: verifies user session before rendering protected routes
+ * - Server-side execution: runs on the server for security and performance
+ * - Type safety: SvelteKit auto-generates types for layout data
+ * - Data passing: makes user data available to all child routes via the layout
+ * 
+ */
 import { redirect } from '@sveltejs/kit';
 import type { LayoutLoad } from './$types';
 import { get } from '$lib/api';

@@ -1,9 +1,13 @@
 <script lang="ts">
+  import { createEventDispatcher } from 'svelte';
   import type { UnifiedRoute } from '../../../../server/routes/routes.js';
   import Badge from './Badge.svelte';
 
   export let routes: UnifiedRoute[] = [];
   export let loading: boolean = false;
+  export let syncingRouteId: string | null = null;
+
+  const dispatch = createEventDispatcher<{ sync: { route: UnifiedRoute } }>();
 
   function formatDistance(meters: number): string {
     return `${(meters / 1000).toFixed(1)} km`;
@@ -18,6 +22,10 @@
       return `https://www.strava.com/routes/${route.id}`;
     }
     return `https://www.komoot.com/tour/${route.id}`;
+  }
+
+  function handleSyncClick(route: UnifiedRoute) {
+    dispatch('sync', { route });
   }
 </script>
 
@@ -87,10 +95,12 @@
                 />
               </td>
               <td class="py-2 px-4 whitespace-nowrap w-32">
-                {#if route.syncStatus === 'synced'}
-                  <Badge variant="success" label="Synced" pulsing={false} />
+                {#if syncingRouteId === route.id}
+                  <Badge variant="info" label="Syncing" loading={true} />
+                {:else if route.syncStatus === 'synced'}
+                  <Badge variant="success" label="Synced" clickable={true} on:click={() => handleSyncClick(route)} />
                 {:else}
-                  <Badge variant="neutral" label="Not Synced" pulsing={false} />
+                  <Badge variant="neutral" label="Not Synced" clickable={true} on:click={() => handleSyncClick(route)} />
                 {/if}
               </td>
             </tr>
